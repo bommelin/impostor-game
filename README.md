@@ -1,78 +1,39 @@
 # Impostor!
 
-A local **pass-the-phone party game** played on one device.  
-Everyone is in the same room. The app handles setup and secret roles — the rest happens face to face.
+## Play Online
+**[https://bommelin.github.io/impostor-game/](https://bommelin.github.io/impostor-game/)**
 
----
+## Rules (Current Game)
+- One phone, same room, pass-the-phone play.
+- Set **2 to 12 players**.
+- Set **1 to N-1 impostors**.
+- Pick one or more categories (built-in and/or custom) with at least one word total.
+- The game picks one random word for the round.
+- Civilians see the word; impostors see **IMPOSTOR**.
+- Starting player is chosen randomly.
+- Very rarely, everyone is secretly an impostor; this is only revealed after the round.
+- Voting happens off-device.
 
-## What is the game?
+## How To Play
+1. On Home, tap **New Game** (or **Play Again** if players are already saved).
+2. In **Players**, set player count and impostor count with +/- and enter names.
+3. In **Choose Category**, select categories and tap **Let's Play!**.
+4. Pass the phone:
+- Tap **I'm ready** on each pass screen.
+- Drag and hold the slider to peek at the role card.
+- Release to hide again; then tap **Next player**.
+5. After all reveals, the round screen shows:
+- Starting player
+- Categories used this round
+- Impostor count
+- Timer controls (start, pause, resume, reset, end timer)
+6. Tap **End Game** to finish the round and open the post-game menu.
+7. In **Round Over**, choose **Play Again**, **Edit Players**, or **Exit**.
 
-You are a group of players.
-
-- Most players know a secret word.
-- One or more players are **impostors** and do not know the word.
-- Players take turns saying clues out loud without making the word obvious.
-- After a few rounds, players vote (currently handled off-device).
-
-Very rarely, a round may occur where **everyone is the impostor**.  
-This is not announced during play and is only revealed at the end.
-
----
-
-## How to play
-
-1. Set up players and impostors.
-2. Choose categories (built-in and/or custom).
-3. Pass the phone around so everyone privately sees their role.
-4. The app selects a starting player.
-5. Play the game out loud:
-   - Each player gives a short clue.
-   - Don’t say the word directly.
-6. After your chosen number of rounds, vote manually.
-
----
-
-## Features
-
-### Player setup
-- Choose the number of players
-- Enter player names (saved between games)
-- Choose the number of impostors
-
-### Categories and words
-- Select from built-in categories
-- Create **Custom Categories**:
-  - Add your own words using comma-separated input
-  - Edit and delete custom categories
-  - Select multiple custom categories at once
-  - Custom categories are saved between games
-
-### Private role reveal
-- Pass-the-phone flow so each player sees their role privately
-- Anti-peek interaction before revealing a role
-- Full-screen transition between players
-- Random starting player
-
----
-
-## Setup (local development)
-
-### Requirements
-- Node.js (recommended: latest LTS)
-- npm (included with Node)
-
-### Install dependencies
-Run `npm install` in the project folder.
-
-### Start the development server
-Run `npm run dev`.
-
-The app will be available at a local address shown in the terminal (usually http://localhost:5173).
-
-### Build the app
-Run `npm run build` to create a production build.
-
-### Preview the production build locally
-Run `npm run preview`.
-
----
+## Current Features
+- Player names and main settings persist between games.
+- Built-in categories plus custom category lists.
+- Custom category management: create, edit, delete, and select lists.
+- Private role reveal with anti-peek slider interaction.
+- Random word, random impostor assignment, and random starting player each round.
+- Post-round reveal message when everyone was the impostor.
