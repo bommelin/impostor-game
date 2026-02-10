@@ -5,8 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 const THEME_COLOR = '#FF8E53'
 const BACKGROUND_COLOR = '#FFF9F0'
 
-// https://vite.dev/config/
 export default defineConfig({
+  // 🔑 REQUIRED for GitHub Pages
+  base: '/impostor-game/',
+
   plugins: [
     react(),
     VitePWA({
@@ -14,14 +16,25 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
-      includeAssets: ['icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'],
+
+      includeAssets: [
+        'icons/icon-180.png',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+      ],
+
       manifest: {
         name: 'Impostor!',
         short_name: 'Impostor',
-        start_url: '/',
+
+        // 🔑 MUST match Pages subpath
+        start_url: '/impostor-game/',
+        scope: '/impostor-game/',
+
         display: 'standalone',
         theme_color: THEME_COLOR,
         background_color: BACKGROUND_COLOR,
+
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -41,7 +54,9 @@ export default defineConfig({
           },
         ],
       },
+
       injectManifest: {
+        // good as-is 👍
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
