@@ -55,7 +55,7 @@ npm run dev
 - Random word from selected category pool
 - Random impostor assignment
 - Random starting player
-- Rare hidden all-impostor round, revealed only after the round
+- Rare hidden all-impostor round (5% chance), revealed only after the round, with a 9-game cooldown after it occurs
 - Voting is manual/off-device
 
 ## Persistence
@@ -64,3 +64,4 @@ npm run dev
 - Enabled custom category IDs
 - Last selected custom category IDs (for round selection)
 - Custom categories in local storage
+- All-impostor cooldown counter in local storage

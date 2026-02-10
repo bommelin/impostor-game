@@ -265,7 +265,7 @@ export default function CustomWordBanksScreen({
                   className="cwb-textarea"
                   value={draftWords}
                   onChange={(e) => setDraftWords(e.target.value)}
-                  placeholder="Words separated by commas"
+                  placeholder="Enter words separated by commas"
                   rows={4}
                   style={{
                     resize: "vertical",
@@ -274,6 +274,7 @@ export default function CustomWordBanksScreen({
                     border: `2px solid ${PALETTE.border}`,
                     fontSize: 16,
                     fontWeight: 600,
+                    fontFamily: "'Nunito', sans-serif",
                     background: "#FFF",
                     color: PALETTE.text,
                   }}

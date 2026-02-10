@@ -27,7 +27,8 @@ No voting logic yet (manual voting happens off-device).
 There is NO "chaos mode" and NO special game mode.
 
 During role assignment only:
-- There is a small probability (e.g. 1%) that ALL players are assigned as impostors.
+- There is a small probability (5%) that ALL players are assigned as impostors.
+- If this all-impostor outcome occurs, it is blocked for the next 9 games (it can happen again starting game 10 after the trigger).
 - This is NOT announced.
 - There is NO special UI or explanation during the game.
 - The game proceeds exactly as a normal game.
@@ -84,6 +85,7 @@ Persist locally:
 ## Engineering guidance
 - Keep it mobile-first (big buttons).
 - Implement state machine for screens to avoid bugs.
+- Back navigation should use a history stack and return to the previously visited screen, rather than hardcoded destinations.
 - Prefer small, testable pure functions for: assigning roles, picking word, chaos logic.
 - When changing behavior, update this AGENTS.md if it affects rules/flow.
 

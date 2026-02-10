@@ -13,11 +13,30 @@ import {
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
+const ALL_IMPOSTOR_COOLDOWN_KEY = "allImpostorCooldown";
+const ALL_IMPOSTOR_COOLDOWN_MAX = 9;
 const load = () => {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
 };
 const save = (data) => {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...load(), ...data })); } catch {}
+};
+const clampAllImpostorCooldown = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return 0;
+  return Math.max(0, Math.min(ALL_IMPOSTOR_COOLDOWN_MAX, parsed));
+};
+const loadAllImpostorCooldown = () => {
+  try {
+    return clampAllImpostorCooldown(localStorage.getItem(ALL_IMPOSTOR_COOLDOWN_KEY));
+  } catch {
+    return 0;
+  }
+};
+const saveAllImpostorCooldown = (value) => {
+  try {
+    localStorage.setItem(ALL_IMPOSTOR_COOLDOWN_KEY, String(clampAllImpostorCooldown(value)));
+  } catch {}
 };
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
@@ -191,6 +210,14 @@ function OutlineButton({ children, onClick, color = PALETTE.primary, style, smal
     >
       {children}
     </button>
+  );
+}
+
+function BackButton({ onClick, style }) {
+  return (
+    <OutlineButton onClick={onClick} color={PALETTE.muted} small style={style}>
+      Back
+    </OutlineButton>
   );
 }
 
@@ -587,6 +614,20 @@ function CategoriesScreen({
 }) {
   const allCats = Object.keys(CATEGORIES);
   const enabledCustomBanks = customWordBanks.filter((bank) => enabledCustomBankIds.includes(bank.id));
+  const categoryTiles = [
+    ...allCats.map((cat) => ({
+      key: `built_in_${cat}`,
+      label: cat,
+      selected: selectedBuiltInCategories.includes(cat),
+      onClick: () => onToggleBuiltInCategory(cat),
+    })),
+    ...enabledCustomBanks.map((bank) => ({
+      key: `custom_${bank.id}`,
+      label: bank.name,
+      selected: selectedCustomBankIds.includes(bank.id),
+      onClick: () => onToggleCustomBankSelection(bank.id),
+    })),
+  ];
   const selectedCustomBanks = enabledCustomBanks.filter((bank) => selectedCustomBankIds.includes(bank.id));
   const selectedEntries = [
     ...selectedBuiltInCategories.map((cat) => ({ id: `built_in_${cat}`, label: cat, words: CATEGORIES[cat] || [] })),
@@ -612,28 +653,15 @@ function CategoriesScreen({
         <Title sub="Pick one or more categories">Choose Category</Title>
       </div>
       <div className="categories-tile-grid" style={{ marginBottom: 20 }}>
-        {allCats.map(cat => (
+        {categoryTiles.map((tile) => (
           <Chip
-            key={cat}
-            label={cat}
-            selected={selectedBuiltInCategories.includes(cat)}
-            onClick={() => onToggleBuiltInCategory(cat)}
+            key={tile.key}
+            label={tile.label}
+            selected={tile.selected}
+            onClick={tile.onClick}
           />
         ))}
       </div>
-
-      {enabledCustomBanks.length > 0 && (
-        <div className="categories-tile-grid" style={{ marginBottom: 12 }}>
-          {enabledCustomBanks.map((bank) => (
-            <Chip
-              key={bank.id}
-              label={bank.name}
-              selected={selectedCustomBankIds.includes(bank.id)}
-              onClick={() => onToggleCustomBankSelection(bank.id)}
-            />
-          ))}
-        </div>
-      )}
 
       <div style={{ marginBottom: 12 }}>
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
@@ -742,7 +770,7 @@ function SelectCustomWordBanksScreen({
       }}>
         {banks.length === 0 ? (
           <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
-            No custom categories available: You can create your own categories and browse more categories from the start screen.
+            No custom categories available. Create your own or browse predefined categories using the button above or from the Home screen.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -957,17 +985,15 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
 
   return (
     <Screen style={{ overflowY: "auto" }}>
-      <div style={{ paddingTop: 28, paddingBottom: 8, textAlign: "center" }}>
-        <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 30, color: PALETTE.text }}>
-          Ready to play!
-        </h2>
+      <div style={{ paddingTop: 24, paddingBottom: 8 }}>
+        <Title>Ready to play!</Title>
       </div>
 
       {/* Starting player hero card */}
       <div className="pop" style={{
-        background: "linear-gradient(135deg, #FF6B6B, #C77DFF)",
+        background: "linear-gradient(135deg, #FF8E53, #FFB347)",
         borderRadius: 22, padding: "18px 20px", textAlign: "center",
-        marginBottom: 14, boxShadow: "0 8px 24px rgba(199,125,255,0.3)",
+        marginBottom: 14, boxShadow: "0 8px 24px rgba(255,142,83,0.3)",
       }}>
         <p style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.75)",
           textTransform: "uppercase", letterSpacing: 2, marginBottom: 6 }}>
@@ -1082,7 +1108,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
         )}
       </div>
 
-      <div style={{ marginTop: "auto" }}>
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
         <BigButton onClick={onStartDiscussion} color={PALETTE.primary}>
           End Game
         </BigButton>
@@ -1132,7 +1158,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   );
 }
 
-function PostGameScreen({ onNewGame, onEditPlayers, onExit, everyoneWasImpostor }) {
+function PostGameScreen({ onNewGame, onPlayAgain, onBackToHome, everyoneWasImpostor }) {
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 36 }}>
@@ -1161,14 +1187,14 @@ function PostGameScreen({ onNewGame, onEditPlayers, onExit, everyoneWasImpostor 
       )}
       <div className="slide-up" style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
         <BigButton onClick={onNewGame} color={PALETTE.primary}>
+          New Game
+        </BigButton>
+        <BigButton onClick={onPlayAgain} color={PALETTE.blue}>
           Play Again
         </BigButton>
-        <OutlineButton onClick={onEditPlayers} color={PALETTE.blue}>
-          Back
-        </OutlineButton>
-        <OutlineButton onClick={onExit} color={PALETTE.muted} small>
-          Exit
-        </OutlineButton>
+        <BigButton onClick={onBackToHome} color={PALETTE.muted}>
+          Return to home screen
+        </BigButton>
       </div>
     </Screen>
   );
@@ -1197,7 +1223,8 @@ export default function App() {
     storedSelectedCustomBankIds.filter((id) => initialEnabledCustomBankSet.has(id)),
   ));
 
-  const [screen, setScreen] = useState("home");
+  const [screenHistory, setScreenHistory] = useState(["home"]);
+  const screen = screenHistory[screenHistory.length - 1];
   const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
   const [players, setPlayers] = useState(stored.savedPlayers || []);
   const [k, setK] = useState(stored.lastImpostorCount || 1);
@@ -1216,6 +1243,23 @@ export default function App() {
   const [startingId, setStartingId] = useState(0);
   const [revealIndex, setRevealIndex] = useState(0);
   const [phase, setPhase] = useState("pass");
+
+  const navigateTo = useCallback((nextScreen, { replace = false, reset = false } = {}) => {
+    setScreenHistory((prev) => {
+      const current = prev[prev.length - 1];
+      if (reset) return [nextScreen];
+      if (current === nextScreen) return prev;
+      if (replace) {
+        if (prev.length <= 1) return [nextScreen];
+        return [...prev.slice(0, -1), nextScreen];
+      }
+      return [...prev, nextScreen];
+    });
+  }, []);
+
+  const goBack = useCallback(() => {
+    setScreenHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
 
   const toggleBuiltInCategory = useCallback((cat) => {
     setSelectedBuiltInCategories((prev) =>
@@ -1289,8 +1333,13 @@ export default function App() {
 
     const chosenWord = pick(pool);
     const ids = Array.from({ length: players.length }, (_, i) => i);
-    const everyoneImpostor = Math.random() < 0.02;
+    const allImpostorCooldown = loadAllImpostorCooldown();
+    const everyoneImpostor = allImpostorCooldown === 0 && Math.random() < 0.05;
     const impostors = everyoneImpostor ? ids : pickN(ids, k);
+    const nextAllImpostorCooldown = everyoneImpostor
+      ? ALL_IMPOSTOR_COOLDOWN_MAX
+      : Math.max(0, allImpostorCooldown - 1);
+    saveAllImpostorCooldown(nextAllImpostorCooldown);
     const starter = pick(ids);
     setSelectedCats([
       ...selectedBuiltInCategories,
@@ -1306,19 +1355,19 @@ export default function App() {
     setStartingId(starter);
     setRevealIndex(0);
     setPhase("pass");
-    setScreen("reveal_loop");
-  }, [customWordBanks, enabledCustomBankIds, k, players, selectedBuiltInCategories, selectedCustomBankIds]);
+    navigateTo("reveal_loop");
+  }, [customWordBanks, enabledCustomBankIds, k, navigateTo, players, selectedBuiltInCategories, selectedCustomBankIds]);
 
   if (screen === "home") return (
     <>
       <GlobalStyle />
       <HomeScreen
         hasPlayers={hasPlayers}
-        onStart={() => setScreen("players")}
-        onPlayAgain={() => setScreen("categories")}
+        onStart={() => navigateTo("players")}
+        onPlayAgain={() => navigateTo("categories")}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("home");
-          setScreen("custom_word_banks");
+          navigateTo("custom_word_banks");
         }}
       />
     </>
@@ -1331,9 +1380,9 @@ export default function App() {
         initial={{ n: players.length || 4, k }}
         onContinue={({ players: ps, k: ki }) => {
           setPlayers(ps); setK(ki);
-          setScreen("categories");
+          navigateTo("categories");
         }}
-        onBack={() => setScreen("home")}
+        onBack={goBack}
       />
     </>
   );
@@ -1350,10 +1399,10 @@ export default function App() {
         onToggleCustomBankSelection={toggleCustomBankSelection}
         onOpenCustomWordBanks={() => {
           setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
-          setScreen("select_custom_word_banks");
+          navigateTo("select_custom_word_banks");
         }}
         onPlay={startRound}
-        onBack={() => setScreen("players")}
+        onBack={goBack}
       />
     </>
   );
@@ -1379,15 +1428,15 @@ export default function App() {
             enabledCustomBankIds: sanitizedEnabledBankIds,
             lastSelectedCustomBankIds: nextSelectedBankIds,
           });
-          setScreen("categories");
+          navigateTo("categories");
         }}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("select_custom_word_banks");
-          setScreen("custom_word_banks");
+          navigateTo("custom_word_banks");
         }}
         onBack={() => {
           setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
-          setScreen("categories");
+          goBack();
         }}
       />
     </>
@@ -1403,7 +1452,7 @@ export default function App() {
         predefinedWordBank={PREDEFINED_CUSTOM_WORD_BANK}
         nextDefaultName={getNextCustomWordBankName(customWordBanks)}
         backButtonLabel={customWordBanksOrigin === "categories" ? "Add categories to selection" : "Back"}
-        onBack={() => setScreen(customWordBanksOrigin)}
+        onBack={goBack}
         onToggleSelection={toggleCustomBankSelection}
         onCreateBank={handleCreateCustomBank}
         onUpdateBank={handleUpdateCustomBank}
@@ -1422,7 +1471,7 @@ export default function App() {
           starterName={players[startingId]}
           categories={selectedCats}
           impostorCount={k}
-          onStartDiscussion={() => setScreen("postgame")}
+          onStartDiscussion={() => navigateTo("postgame")}
         />
       </>
     );
@@ -1461,9 +1510,9 @@ export default function App() {
     <>
       <GlobalStyle />
       <PostGameScreen
-        onNewGame={() => setScreen("categories")}
-        onEditPlayers={() => setScreen("players")}
-        onExit={() => setScreen("home")}
+        onNewGame={() => setScreenHistory(["home", "players"])}
+        onPlayAgain={() => navigateTo("categories")}
+        onBackToHome={() => navigateTo("home", { reset: true })}
         everyoneWasImpostor={impostorIds.length === players.length}
       />
     </>
