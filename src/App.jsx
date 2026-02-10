@@ -65,7 +65,7 @@ const CATEGORY_COLORS = ["#FF6B6B", "#FF8E53"];
 // ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
 const GlobalStyle = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body, #root { height: 100%; width: 100%; overflow: hidden; }
     body {
@@ -435,20 +435,6 @@ function SwipeReveal({ onReveal, revealed, children }) {
           {peeking ? "👁️" : "👉"}
         </div>
 
-        {/* label — centred */}
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          textAlign: "center",
-          padding: "0 12px",
-          fontSize: 12, fontWeight: 800, letterSpacing: 1.8,
-          textTransform: "uppercase",
-          color: peeking ? "#E6A800" : "#C0B8B0",
-          transition: "color 0.15s",
-          pointerEvents: "none",
-        }}>
-          {peeking ? "Release to hide" : "Hold to peek →"}
-        </div>
       </div>
     </div>
   );
@@ -460,15 +446,13 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center", gap: 0 }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ fontSize: 80, marginBottom: 8 }}>🕵️</div>
         <h1 style={{
-          fontFamily: "'Fredoka One', cursive",
-          fontSize: 48, color: PALETTE.primary, lineHeight: 1,
-          textShadow: "3px 3px 0 #FFD93D",
+          fontFamily: "'Archivo Black', 'Fredoka One', sans-serif",
+          fontSize: 62,
+          color: "#E54848",
+          lineHeight: 1,
+          textShadow: "0 4px 0 #B73333",
         }}>Impostor!</h1>
-        <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 16, marginTop: 8 }}>
-          Who's faking it?
-        </p>
       </div>
       <div className="slide-up" style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
         <BigButton onClick={onStart} color={PALETTE.primary}>
@@ -477,7 +461,7 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
         <BigButton onClick={onPlayAgain} color={PALETTE.blue} disabled={!hasPlayers}>
           Play Again
         </BigButton>
-        <BigButton onClick={onOpenCustomWordBanks} color={PALETTE.purple}>
+        <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
           Custom Categories
         </BigButton>
       </div>
@@ -619,9 +603,9 @@ function CategoriesScreen({
           onClick={onOpenCustomWordBanks}
           style={{
             borderRadius: 999,
-            background: "#FFF",
-            border: `2px solid ${PALETTE.border}`,
-            color: PALETTE.muted,
+            background: "#FF8E53",
+            border: "2px solid #FF8E53",
+            color: "#FFF",
             padding: "8px 18px",
             fontSize: 14,
             fontWeight: 800,
@@ -691,7 +675,7 @@ function CategoriesScreen({
         <BigButton onClick={onPlay} color={PALETTE.primary} disabled={totalWords === 0}>
           Let's Play!
         </BigButton>
-        <OutlineButton onClick={onBack} color={PALETTE.muted} small>Edit Players</OutlineButton>
+        <OutlineButton onClick={onBack} color={PALETTE.muted} small>Back</OutlineButton>
       </div>
     </Screen>
   );
@@ -740,11 +724,6 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
             textTransform: "uppercase", letterSpacing: 1.5 }}>
             {name}'s role
           </p>
-          {!revealed && (
-            <p style={{ fontSize: 13, color: "#BBB", marginTop: 4, fontWeight: 600 }}>
-              Drag the arrow to peek — hides when you let go
-            </p>
-          )}
         </div>
 
         <SwipeReveal onReveal={handleReveal} revealed={revealed}>
@@ -1085,7 +1064,7 @@ function PostGameScreen({ onNewGame, onEditPlayers, onExit, everyoneWasImpostor 
           Play Again
         </BigButton>
         <OutlineButton onClick={onEditPlayers} color={PALETTE.blue}>
-          Edit Players
+          Back
         </OutlineButton>
         <OutlineButton onClick={onExit} color={PALETTE.muted} small>
           Exit
