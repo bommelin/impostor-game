@@ -518,10 +518,10 @@ function PlayersScreen({ initial, onContinue, onBack }) {
   return (
     <Screen>
       <div style={{ paddingTop: 24, marginBottom: 16 }}>
-        <Title>Players</Title>
+        <Title>Choose players</Title>
       </div>
       <Counter
-        label="Players"
+        label="👥 Players"
         value={n}
         onDec={() => setN(v => Math.max(2, v - 1))}
         onInc={() => setN(v => Math.min(12, v + 1))}
@@ -529,7 +529,7 @@ function PlayersScreen({ initial, onContinue, onBack }) {
         disableInc={n >= 12}
       />
       <Counter
-        label="Impostors"
+        label="🕵️ Impostors"
         value={k}
         onDec={() => setK(v => Math.max(1, v - 1))}
         onInc={() => setK(v => v + 1)}
