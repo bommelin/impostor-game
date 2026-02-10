@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CATEGORIES } from "./wordBank";
+import { PREDEFINED_CUSTOM_WORD_BANK } from "./predefinedCustomWordBank";
 import CustomWordBanksScreen from "./screens/CustomWordBanks";
 import {
   loadCustomWordBanks,
@@ -225,15 +226,16 @@ function PillButton({ children, onClick, color = PALETTE.primary, disabled, styl
   );
 }
 
-function Chip({ label, selected, onClick, color }) {
+function Chip({ label, selected, onClick }) {
   const [c1, c2] = CATEGORY_COLORS[label] || ["#FF6B6B", "#FF8E53"];
   return (
     <button
+      className="category-tile"
       onClick={onClick}
       style={{
-        padding: "12px 18px",
-        borderRadius: 50,
-        fontSize: 16,
+        padding: "10px 8px",
+        borderRadius: 14,
+        fontSize: 14,
         fontFamily: "'Nunito', sans-serif",
         fontWeight: 700,
         border: `3px solid ${selected ? c1 : "#E0D6CC"}`,
@@ -242,8 +244,16 @@ function Chip({ label, selected, onClick, color }) {
         transition: "all 0.2s",
         transform: selected ? "scale(1.04)" : "scale(1)",
         boxShadow: selected ? `0 4px 12px ${c1}55` : "none",
-        whiteSpace: "nowrap",
+        whiteSpace: "normal",
         letterSpacing: 0.2,
+        width: "100%",
+        minHeight: 58,
+        lineHeight: 1.2,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
       }}
     >
       {selected ? "✓ " : ""}{label}
@@ -462,7 +472,7 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
           Play Again
         </BigButton>
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
-          Custom Categories
+          More Categories
         </BigButton>
       </div>
       {/* decorative blobs */}
@@ -584,10 +594,22 @@ function CategoriesScreen({
 
   return (
     <Screen>
+      <style>{`
+        .categories-tile-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+        @media (max-width: 339px) {
+          .categories-tile-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+      `}</style>
       <div style={{ paddingTop: 24, marginBottom: 20 }}>
         <Title sub="Pick one or more categories">Choose Category</Title>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: 20 }}>
+      <div className="categories-tile-grid" style={{ marginBottom: 20 }}>
         {allCats.map(cat => (
           <Chip
             key={cat}
@@ -598,22 +620,14 @@ function CategoriesScreen({
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <button
-          onClick={onOpenCustomWordBanks}
-          style={{
-            borderRadius: 999,
-            background: "#FFF",
-            border: `2px solid ${PALETTE.border}`,
-            color: PALETTE.muted,
-            padding: "8px 18px",
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: 0.2,
-          }}
-        >
-          Custom Categories
-        </button>
+      <div style={{ marginBottom: 12 }}>
+        <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
+          More Categories
+        </BigButton>
+      </div>
+
+      {selectedCustomBanks.length > 0 && (
+        <div className="categories-tile-grid" style={{ marginBottom: 12 }}>
         {selectedCustomBanks.map((bank) => (
           <Chip
             key={bank.id}
@@ -622,7 +636,8 @@ function CategoriesScreen({
             onClick={() => onToggleCustomBankSelection(bank.id)}
           />
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Preview — shows only when something is selected */}
       <div style={{
@@ -676,6 +691,88 @@ function CategoriesScreen({
           Let's Play!
         </BigButton>
         <OutlineButton onClick={onBack} color={PALETTE.muted} small>Back</OutlineButton>
+      </div>
+    </Screen>
+  );
+}
+
+function SelectCustomWordBanksScreen({
+  banks,
+  initialSelectedBankIds,
+  onApply,
+  onBack,
+}) {
+  const [draftSelectedBankIds, setDraftSelectedBankIds] = useState(initialSelectedBankIds);
+
+  const toggleBank = (bankId) => {
+    setDraftSelectedBankIds((prev) =>
+      prev.includes(bankId) ? prev.filter((entry) => entry !== bankId) : [...prev, bankId],
+    );
+  };
+
+  return (
+    <Screen>
+      <div style={{ paddingTop: 24, marginBottom: 20 }}>
+        <Title>Select more categories</Title>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+        <BigButton onClick={() => onApply(draftSelectedBankIds)} color="#FF8E53">
+          Add categories to selection
+        </BigButton>
+        <OutlineButton onClick={onBack} color={PALETTE.muted} small>
+          Back
+        </OutlineButton>
+      </div>
+
+      <div style={{
+        background: "#FFF",
+        borderRadius: 16,
+        border: `2px solid ${PALETTE.border}`,
+        padding: 12,
+        marginBottom: 14,
+        flex: 1,
+      }}>
+        {banks.length === 0 ? (
+          <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
+            No custom categories available: You can create your own categories and browse more categories from the start screen.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {banks.map((bank) => {
+              const isSelected = draftSelectedBankIds.includes(bank.id);
+              return (
+                <div
+                  key={bank.id}
+                  onClick={() => toggleBank(bank.id)}
+                  style={{
+                    borderRadius: 12,
+                    border: `2px solid ${isSelected ? PALETTE.primary : PALETTE.border}`,
+                    background: isSelected ? "#FFF0F0" : "#FFF",
+                    padding: "10px 12px",
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontWeight: 800, fontSize: 16, color: PALETTE.text }}>
+                      {bank.name}
+                    </p>
+                    <p style={{ fontSize: 12, color: PALETTE.muted, fontWeight: 700 }}>
+                      {bank.words.length} word{bank.words.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: isSelected ? PALETTE.primary : "#AAA" }}>
+                    {isSelected ? "Selected" : "Tap to select"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </Screen>
   );
@@ -1071,7 +1168,7 @@ function PostGameScreen({ onNewGame, onEditPlayers, onExit, everyoneWasImpostor 
 }
 
 // ─── GAME STATE MACHINE ──────────────────────────────────────────────────────
-// screens: home | players | categories | custom_word_banks | reveal_loop | discussion | postgame
+// screens: home | players | categories | custom_word_banks | select_custom_word_banks | reveal_loop | discussion | postgame
 
 export default function App() {
   const stored = load();
@@ -1079,7 +1176,7 @@ export default function App() {
   const hasPlayers = !!(stored.savedPlayers?.length);
 
   const [screen, setScreen] = useState("home");
-  const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("categories");
+  const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
   const [players, setPlayers] = useState(stored.savedPlayers || []);
   const [k, setK] = useState(stored.lastImpostorCount || 1);
   const [selectedCats, setSelectedCats] = useState(stored.lastSelectedCategories || []);
@@ -1137,6 +1234,17 @@ export default function App() {
     setSelectedCustomBankIds((prev) => {
       const next = prev.filter((bankId) => bankId !== id);
       save({ lastSelectedCustomBankIds: next });
+      return next;
+    });
+  }, []);
+
+  const handleSavePredefinedBank = useCallback((bank) => {
+    setCustomWordBanks((prev) => {
+      const next = createCustomWordBank(prev, {
+        name: bank.name,
+        wordsInput: bank.words,
+      });
+      saveCustomWordBanks(next);
       return next;
     });
   }, []);
@@ -1209,11 +1317,25 @@ export default function App() {
         onToggleBuiltInCategory={toggleBuiltInCategory}
         onToggleCustomBankSelection={toggleCustomBankSelection}
         onOpenCustomWordBanks={() => {
-          setCustomWordBanksOrigin("categories");
-          setScreen("custom_word_banks");
+          setScreen("select_custom_word_banks");
         }}
         onPlay={startRound}
         onBack={() => setScreen("players")}
+      />
+    </>
+  );
+
+  if (screen === "select_custom_word_banks") return (
+    <>
+      <GlobalStyle />
+      <SelectCustomWordBanksScreen
+        banks={customWordBanks}
+        initialSelectedBankIds={selectedCustomBankIds}
+        onApply={(nextSelectedBankIds) => {
+          setSelectedCustomBankIds(nextSelectedBankIds);
+          setScreen("categories");
+        }}
+        onBack={() => setScreen("categories")}
       />
     </>
   );
@@ -1225,12 +1347,15 @@ export default function App() {
         banks={customWordBanks}
         selectedBankIds={customWordBanksOrigin === "categories" ? selectedCustomBankIds : []}
         selectable={customWordBanksOrigin === "categories"}
+        predefinedWordBank={PREDEFINED_CUSTOM_WORD_BANK}
         nextDefaultName={getNextCustomWordBankName(customWordBanks)}
+        backButtonLabel={customWordBanksOrigin === "categories" ? "Add categories to selection" : "Back"}
         onBack={() => setScreen(customWordBanksOrigin)}
         onToggleSelection={toggleCustomBankSelection}
         onCreateBank={handleCreateCustomBank}
         onUpdateBank={handleUpdateCustomBank}
         onDeleteBank={handleDeleteCustomBank}
+        onSavePredefinedBank={handleSavePredefinedBank}
       />
     </>
   );

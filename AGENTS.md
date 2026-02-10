@@ -52,6 +52,7 @@ Implementation notes:
    - Continue → Choose Categories
 3. Choose Categories
    - Select one or more categories
+   - Custom categories are selected from a dedicated selection-only screen
    - Play
 4. Role Reveal Loop (pass-the-phone)
    - Gate screen: "Pass to {name}" + hold/slide to reveal
@@ -64,6 +65,11 @@ Implementation notes:
    - Choose Categories (same as above)
    - Edit Players → Choose Players
    - Exit
+
+Custom Categories screen behavior:
+- Includes tabs: "My Custom Categories" and "Browse".
+- "Browse" shows predefined templates (read-only) that can be copied into "My Custom Categories" with one tap.
+- This full management screen is accessed from Home. The Choose Categories flow uses a separate selection-only screen.
 
 ## Persistence
 Persist locally:
