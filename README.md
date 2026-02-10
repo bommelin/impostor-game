@@ -1,39 +1,60 @@
 # Impostor!
 
+Pass-the-phone party game played locally on one device.
+
+## Author
+Felix Bommelin
+
 ## Play Online
-**[https://bommelin.github.io/impostor-game/](https://bommelin.github.io/impostor-game/)**
+[https://bommelin.github.io/impostor-game/](https://bommelin.github.io/impostor-game/)
 
-## Rules (Current Game)
-- One phone, same room, pass-the-phone play.
-- Set **2 to 12 players**.
-- Set **1 to N-1 impostors**.
-- Pick one or more categories (built-in and/or custom) with at least one word total.
-- The game picks one random word for the round.
-- Civilians see the word; impostors see **IMPOSTOR**.
-- Starting player is chosen randomly.
-- Very rarely, everyone is secretly an impostor; this is only revealed after the round.
-- Voting happens off-device.
+## Home Screen Preview
+![Home screen demo](public/home-screen-demo.svg)
 
-## How To Play
-1. On Home, tap **New Game** (or **Play Again** if players are already saved).
-2. In **Players**, set player count and impostor count with +/- and enter names.
-3. In **Choose Category**, select categories and tap **Let's Play!**.
-4. Pass the phone:
-- Tap **I'm ready** on each pass screen.
-- Drag and hold the slider to peek at the role card.
-- Release to hide again; then tap **Next player**.
-5. After all reveals, the round screen shows:
-- Starting player
-- Categories used this round
-- Impostor count
-- Timer controls (start, pause, resume, reset, end timer)
-6. Tap **End Game** to finish the round and open the post-game menu.
-7. In **Round Over**, choose **Play Again**, **Edit Players**, or **Exit**.
+## Run Locally
+```bash
+npm install
+npm run dev
+```
 
-## Current Features
-- Player names and main settings persist between games.
-- Built-in categories plus custom category lists.
-- Custom category management: create, edit, delete, and select lists.
-- Private role reveal with anti-peek slider interaction.
-- Random word, random impostor assignment, and random starting player each round.
-- Post-round reveal message when everyone was the impostor.
+## Current Game Loop
+1. **Home**: `New Game`, `Play Again`, `More Categories`
+2. **Choose players**: set player count, impostor count, and names
+3. **Choose Category**:
+   - pick built-in categories
+   - open custom-category selection via `More Categories`
+   - start with `Let's Play!`
+4. **Pass/reveal loop**:
+   - pass screen (`I'm ready`)
+   - swipe-to-peek private role reveal
+5. **Ready to play** screen:
+   - starting player
+   - selected categories
+   - impostor count
+   - timer controls
+6. **End Game**
+7. **Round Over**: `Play Again`, `Back`, `Exit`
+
+## Category Flows
+- **Built-in categories**: configured in `src/wordBank.js`
+- **Custom categories (management)**: Home → `More Categories`
+  - create/edit/delete custom categories
+  - browse predefined templates
+  - copy templates into personal custom categories
+- **Custom categories (selection-only)**: Choose Category → `More Categories`
+  - select/deselect from existing saved custom categories only
+  - no create/edit/delete in this flow
+
+## Rules
+- 2–12 players
+- 1 to `N - 1` impostors
+- Random word from selected category pool
+- Random impostor assignment
+- Random starting player
+- Rare hidden all-impostor round, revealed only after the round
+- Voting is manual/off-device
+
+## Persistence
+- Saved players and setup values
+- Last selected categories
+- Custom categories in local storage
