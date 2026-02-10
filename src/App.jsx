@@ -548,7 +548,7 @@ function PlayersScreen({ initial, onContinue, onBack }) {
               onChange={e => setNames(prev => prev.map((v, j) => j === i ? e.target.value : v))}
               placeholder={`Player ${i + 1}`}
               style={{
-                padding: "10px 14px", borderRadius: 12, fontSize: 15, fontWeight: 600,
+                padding: "10px 14px", borderRadius: 12, fontSize: 16, fontWeight: 600,
                 border: `2px solid ${PALETTE.border}`, outline: "none",
                 background: PALETTE.bg, color: PALETTE.text,
               }}
