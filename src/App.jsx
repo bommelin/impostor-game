@@ -576,6 +576,7 @@ function PlayersScreen({ initial, onContinue, onBack }) {
 
 function CategoriesScreen({
   selectedBuiltInCategories,
+  enabledCustomBankIds,
   selectedCustomBankIds,
   customWordBanks,
   onToggleBuiltInCategory,
@@ -585,7 +586,8 @@ function CategoriesScreen({
   onBack,
 }) {
   const allCats = Object.keys(CATEGORIES);
-  const selectedCustomBanks = customWordBanks.filter((bank) => selectedCustomBankIds.includes(bank.id));
+  const enabledCustomBanks = customWordBanks.filter((bank) => enabledCustomBankIds.includes(bank.id));
+  const selectedCustomBanks = enabledCustomBanks.filter((bank) => selectedCustomBankIds.includes(bank.id));
   const selectedEntries = [
     ...selectedBuiltInCategories.map((cat) => ({ id: `built_in_${cat}`, label: cat, words: CATEGORIES[cat] || [] })),
     ...selectedCustomBanks.map((bank) => ({ id: bank.id, label: bank.name, words: bank.words })),
@@ -620,24 +622,24 @@ function CategoriesScreen({
         ))}
       </div>
 
+      {enabledCustomBanks.length > 0 && (
+        <div className="categories-tile-grid" style={{ marginBottom: 12 }}>
+          {enabledCustomBanks.map((bank) => (
+            <Chip
+              key={bank.id}
+              label={bank.name}
+              selected={selectedCustomBankIds.includes(bank.id)}
+              onClick={() => onToggleCustomBankSelection(bank.id)}
+            />
+          ))}
+        </div>
+      )}
+
       <div style={{ marginBottom: 12 }}>
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
           More Categories
         </BigButton>
       </div>
-
-      {selectedCustomBanks.length > 0 && (
-        <div className="categories-tile-grid" style={{ marginBottom: 12 }}>
-        {selectedCustomBanks.map((bank) => (
-          <Chip
-            key={bank.id}
-            label={bank.name}
-            selected
-            onClick={() => onToggleCustomBankSelection(bank.id)}
-          />
-        ))}
-        </div>
-      )}
 
       {/* Preview — shows only when something is selected */}
       <div style={{
@@ -698,14 +700,16 @@ function CategoriesScreen({
 
 function SelectCustomWordBanksScreen({
   banks,
-  initialSelectedBankIds,
+  draftEnabledBankIds,
+  onDraftEnabledBankIdsChange,
   onApply,
+  onOpenCustomWordBanks,
   onBack,
 }) {
-  const [draftSelectedBankIds, setDraftSelectedBankIds] = useState(initialSelectedBankIds);
+  const enabledBankIds = draftEnabledBankIds || [];
 
   const toggleBank = (bankId) => {
-    setDraftSelectedBankIds((prev) =>
+    onDraftEnabledBankIdsChange((prev) =>
       prev.includes(bankId) ? prev.filter((entry) => entry !== bankId) : [...prev, bankId],
     );
   };
@@ -717,8 +721,11 @@ function SelectCustomWordBanksScreen({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        <BigButton onClick={() => onApply(draftSelectedBankIds)} color="#FF8E53">
+        <BigButton onClick={() => onApply(enabledBankIds)} color="#FF8E53">
           Add categories to selection
+        </BigButton>
+        <BigButton onClick={onOpenCustomWordBanks} color={PALETTE.blue}>
+          Create & browse categories
         </BigButton>
         <OutlineButton onClick={onBack} color={PALETTE.muted} small>
           Back
@@ -740,7 +747,7 @@ function SelectCustomWordBanksScreen({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {banks.map((bank) => {
-              const isSelected = draftSelectedBankIds.includes(bank.id);
+              const isSelected = enabledBankIds.includes(bank.id);
               return (
                 <div
                   key={bank.id}
@@ -1174,6 +1181,21 @@ export default function App() {
   const stored = load();
   const initialCustomWordBanks = loadCustomWordBanks();
   const hasPlayers = !!(stored.savedPlayers?.length);
+  const storedEnabledCustomBankIds = Array.isArray(stored.enabledCustomBankIds)
+    ? stored.enabledCustomBankIds
+    : [];
+  const storedSelectedCustomBankIds = Array.isArray(stored.lastSelectedCustomBankIds)
+    ? stored.lastSelectedCustomBankIds
+    : [];
+  const initialKnownCustomBankIds = new Set(initialCustomWordBanks.map((bank) => bank.id));
+  const initialEnabledCustomBankIds = Array.from(new Set(
+    (storedEnabledCustomBankIds.length > 0 ? storedEnabledCustomBankIds : storedSelectedCustomBankIds)
+      .filter((id) => initialKnownCustomBankIds.has(id)),
+  ));
+  const initialEnabledCustomBankSet = new Set(initialEnabledCustomBankIds);
+  const initialSelectedCustomBankIds = Array.from(new Set(
+    storedSelectedCustomBankIds.filter((id) => initialEnabledCustomBankSet.has(id)),
+  ));
 
   const [screen, setScreen] = useState("home");
   const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
@@ -1185,11 +1207,9 @@ export default function App() {
     const storedBuiltIn = Array.isArray(stored.lastSelectedCategories) ? stored.lastSelectedCategories : [];
     return storedBuiltIn.filter((cat) => Object.prototype.hasOwnProperty.call(CATEGORIES, cat));
   });
-  const [selectedCustomBankIds, setSelectedCustomBankIds] = useState(() => {
-    const storedCustomIds = Array.isArray(stored.lastSelectedCustomBankIds) ? stored.lastSelectedCustomBankIds : [];
-    const knownIds = new Set(initialCustomWordBanks.map((bank) => bank.id));
-    return storedCustomIds.filter((id) => knownIds.has(id));
-  });
+  const [enabledCustomBankIds, setEnabledCustomBankIds] = useState(initialEnabledCustomBankIds);
+  const [selectedCustomBankIds, setSelectedCustomBankIds] = useState(initialSelectedCustomBankIds);
+  const [selectCustomWordBanksDraftIds, setSelectCustomWordBanksDraftIds] = useState([]);
   // runtime
   const [word, setWord] = useState("");
   const [impostorIds, setImpostorIds] = useState([]);
@@ -1204,10 +1224,11 @@ export default function App() {
   }, []);
 
   const toggleCustomBankSelection = useCallback((bankId) => {
+    if (!enabledCustomBankIds.includes(bankId)) return;
     setSelectedCustomBankIds((prev) =>
       prev.includes(bankId) ? prev.filter((entry) => entry !== bankId) : [...prev, bankId],
     );
-  }, []);
+  }, [enabledCustomBankIds]);
 
   const handleCreateCustomBank = useCallback(({ name, wordsInput }) => {
     setCustomWordBanks((prev) => {
@@ -1231,11 +1252,17 @@ export default function App() {
       saveCustomWordBanks(next);
       return next;
     });
+    setEnabledCustomBankIds((prev) => {
+      const next = prev.filter((bankId) => bankId !== id);
+      save({ enabledCustomBankIds: next });
+      return next;
+    });
     setSelectedCustomBankIds((prev) => {
       const next = prev.filter((bankId) => bankId !== id);
       save({ lastSelectedCustomBankIds: next });
       return next;
     });
+    setSelectCustomWordBanksDraftIds((prev) => prev.filter((bankId) => bankId !== id));
   }, []);
 
   const handleSavePredefinedBank = useCallback((bank) => {
@@ -1250,7 +1277,10 @@ export default function App() {
   }, []);
 
   const startRound = useCallback(() => {
-    const selectedCustomBanks = customWordBanks.filter((bank) => selectedCustomBankIds.includes(bank.id));
+    const enabledCustomBankSet = new Set(enabledCustomBankIds);
+    const selectedCustomBanks = customWordBanks.filter((bank) =>
+      enabledCustomBankSet.has(bank.id) && selectedCustomBankIds.includes(bank.id),
+    );
     const pool = [
       ...selectedBuiltInCategories.flatMap((cat) => CATEGORIES[cat] || []),
       ...selectedCustomBanks.flatMap((bank) => bank.words),
@@ -1269,6 +1299,7 @@ export default function App() {
     save({
       lastSelectedCategories: selectedBuiltInCategories,
       lastSelectedCustomBankIds: selectedCustomBankIds,
+      enabledCustomBankIds,
     });
     setWord(chosenWord);
     setImpostorIds(impostors);
@@ -1276,7 +1307,7 @@ export default function App() {
     setRevealIndex(0);
     setPhase("pass");
     setScreen("reveal_loop");
-  }, [customWordBanks, k, players, selectedBuiltInCategories, selectedCustomBankIds]);
+  }, [customWordBanks, enabledCustomBankIds, k, players, selectedBuiltInCategories, selectedCustomBankIds]);
 
   if (screen === "home") return (
     <>
@@ -1312,11 +1343,13 @@ export default function App() {
       <GlobalStyle />
       <CategoriesScreen
         selectedBuiltInCategories={selectedBuiltInCategories}
+        enabledCustomBankIds={enabledCustomBankIds}
         selectedCustomBankIds={selectedCustomBankIds}
         customWordBanks={customWordBanks}
         onToggleBuiltInCategory={toggleBuiltInCategory}
         onToggleCustomBankSelection={toggleCustomBankSelection}
         onOpenCustomWordBanks={() => {
+          setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
           setScreen("select_custom_word_banks");
         }}
         onPlay={startRound}
@@ -1330,12 +1363,32 @@ export default function App() {
       <GlobalStyle />
       <SelectCustomWordBanksScreen
         banks={customWordBanks}
-        initialSelectedBankIds={selectedCustomBankIds}
-        onApply={(nextSelectedBankIds) => {
+        draftEnabledBankIds={selectCustomWordBanksDraftIds}
+        onDraftEnabledBankIdsChange={setSelectCustomWordBanksDraftIds}
+        onApply={(nextEnabledBankIds) => {
+          const knownIds = new Set(customWordBanks.map((bank) => bank.id));
+          const sanitizedEnabledBankIds = Array.from(new Set(
+            nextEnabledBankIds.filter((id) => knownIds.has(id)),
+          ));
+          const enabledSet = new Set(sanitizedEnabledBankIds);
+          const nextSelectedBankIds = selectedCustomBankIds.filter((id) => enabledSet.has(id));
+          setEnabledCustomBankIds(sanitizedEnabledBankIds);
           setSelectedCustomBankIds(nextSelectedBankIds);
+          setSelectCustomWordBanksDraftIds(sanitizedEnabledBankIds);
+          save({
+            enabledCustomBankIds: sanitizedEnabledBankIds,
+            lastSelectedCustomBankIds: nextSelectedBankIds,
+          });
           setScreen("categories");
         }}
-        onBack={() => setScreen("categories")}
+        onOpenCustomWordBanks={() => {
+          setCustomWordBanksOrigin("select_custom_word_banks");
+          setScreen("custom_word_banks");
+        }}
+        onBack={() => {
+          setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
+          setScreen("categories");
+        }}
       />
     </>
   );

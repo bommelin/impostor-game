@@ -70,6 +70,10 @@ Custom Categories screen behavior:
 - Includes tabs: "My Custom Categories" and "Browse".
 - "Browse" shows predefined templates (read-only) that can be copied into "My Custom Categories" with one tap.
 - This full management screen is accessed from Home. The Choose Categories flow uses a separate selection-only screen.
+- The selection-only "Select more categories" screen includes a full-width "Create & browse categories" button that opens the full management screen temporarily.
+- Back behavior is origin-based: from Home it returns to Home, and from the selection-only flow it returns to "Select more categories".
+- The selection-only screen controls which custom categories are enabled (visible) on Choose Categories.
+- Enabled custom categories remain visible on Choose Categories even when unselected; they only disappear when disabled in selection-only.
 
 ## Persistence
 Persist locally:

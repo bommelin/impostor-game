@@ -22,7 +22,8 @@ npm run dev
 2. **Choose players**: set player count, impostor count, and names
 3. **Choose Category**:
    - pick built-in categories
-   - open custom-category selection via `More Categories`
+   - toggle enabled custom categories (shown as normal tiles under built-ins)
+   - open custom-category selection via `More Categories` (button sits directly above the preview box)
    - start with `Let's Play!`
 4. **Pass/reveal loop**:
    - pass screen (`I'm ready`)
@@ -42,8 +43,11 @@ npm run dev
   - browse predefined templates
   - copy templates into personal custom categories
 - **Custom categories (selection-only)**: Choose Category → `More Categories`
-  - select/deselect from existing saved custom categories only
+  - controls the **enabled custom categories** list (what appears on Choose Category)
+  - `Add categories to selection` commits enabled categories
+  - `Back` returns without applying draft changes
   - no create/edit/delete in this flow
+  - includes `Create & browse categories` to temporarily open full management, then return
 
 ## Rules
 - 2–12 players
@@ -57,4 +61,6 @@ npm run dev
 ## Persistence
 - Saved players and setup values
 - Last selected categories
+- Enabled custom category IDs
+- Last selected custom category IDs (for round selection)
 - Custom categories in local storage
