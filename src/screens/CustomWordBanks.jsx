@@ -292,8 +292,7 @@ export default function CustomWordBanksScreen({
                 padding: "8px 10px",
               }}
             >
-            💡 Tip: To quickly create your own categories, ask any AI model the following and paste the results:
-            "Generate a list of 50 words within the category [], all words must be separated by commas."
+            💡 Tip: Ask an AI-model to generate words within a category, make sure to mention to separate all words by commas.
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
