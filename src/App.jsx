@@ -486,6 +486,22 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
         background: "#FFD93D33", zIndex: -1 }} />
       <div style={{ position: "absolute", bottom: 60, left: -40, width: 160, height: 160, borderRadius: "50%",
         background: "#6BCB7722", zIndex: -1 }} />
+      <p
+        style={{
+          position: "absolute",
+          bottom: 10,
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: 11,
+          fontWeight: 600,
+          color: "#9A9A9A",
+          letterSpacing: 0.2,
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Made by Felix Bommelin
+      </p>
     </Screen>
   );
 }
