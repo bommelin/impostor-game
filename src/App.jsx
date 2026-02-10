@@ -603,9 +603,9 @@ function CategoriesScreen({
           onClick={onOpenCustomWordBanks}
           style={{
             borderRadius: 999,
-            background: "#FF8E53",
-            border: "2px solid #FF8E53",
-            color: "#FFF",
+            background: "#FFF",
+            border: `2px solid ${PALETTE.border}`,
+            color: PALETTE.muted,
             padding: "8px 18px",
             fontSize: 14,
             fontWeight: 800,
@@ -854,7 +854,6 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   return (
     <Screen style={{ overflowY: "auto" }}>
       <div style={{ paddingTop: 28, paddingBottom: 8, textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 6 }}>🎯</div>
         <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 30, color: PALETTE.text }}>
           Ready to play!
         </h2>
@@ -873,9 +872,6 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
         <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 38, color: "#FFF",
           textShadow: "2px 2px 0 rgba(0,0,0,0.15)", lineHeight: 1.1 }}>
           {starterName}
-        </p>
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 6, fontWeight: 600 }}>
-          speaks first — describe your word!
         </p>
       </div>
 
@@ -1037,7 +1033,7 @@ function PostGameScreen({ onNewGame, onEditPlayers, onExit, everyoneWasImpostor 
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 36 }}>
         <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
-        <Title sub="Hope it was fun!">Round Over!</Title>
+        <Title>Round Over!</Title>
       </div>
       {everyoneWasImpostor && (
         <div style={{
