@@ -281,6 +281,20 @@ export default function CustomWordBanksScreen({
                 color: PALETTE.text,
               }}
             />
+            <div
+              style={{
+                background: "#F3F3F3",
+                color: "#6F6F6F",
+                fontSize: 12,
+                lineHeight: 1.4,
+                fontWeight: 600,
+                borderRadius: 10,
+                padding: "8px 10px",
+              }}
+            >
+            💡 Tip: To quickly create your own categories, ask any AI model the following and paste the results:
+            "Generate a list of 50 words within the category [], all words must be separated by commas."
+            </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={handleSave}
