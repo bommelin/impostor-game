@@ -1560,6 +1560,7 @@ function CategoriesScreen({
 function SelectCustomWordBanksScreen({
   banks,
   draftEnabledBankIds,
+  baselineEnabledBankIds,
   sortMode,
   onDraftEnabledBankIdsChange,
   onSortModeChange,
@@ -1567,8 +1568,17 @@ function SelectCustomWordBanksScreen({
   onOpenCustomWordBanks,
   onBack,
 }) {
-  const selectedCategories = draftEnabledBankIds || [];
-  const isDisabled = selectedCategories.length === 0;
+  const selectedCategories = Array.isArray(draftEnabledBankIds) ? draftEnabledBankIds : [];
+  const baselineCategories = Array.isArray(baselineEnabledBankIds) ? baselineEnabledBankIds : [];
+  const hasSelectionChanges = useMemo(() => {
+    const selectedSet = new Set(selectedCategories);
+    const baselineSet = new Set(baselineCategories);
+    if (selectedSet.size !== baselineSet.size) return true;
+    for (const id of selectedSet) {
+      if (!baselineSet.has(id)) return true;
+    }
+    return false;
+  }, [baselineCategories, selectedCategories]);
   const handleAddCategories = () => onApply(selectedCategories);
   const hasBanks = banks.length > 0;
   const allBanksSelected = hasBanks && banks.every((bank) => selectedCategories.includes(bank.id));
@@ -1597,12 +1607,11 @@ function SelectCustomWordBanksScreen({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
         <BigButton
-          onClick={isDisabled ? undefined : handleAddCategories}
-          disabled={isDisabled}
-          className={isDisabled ? "buttonDisabled" : undefined}
+          disabled={!hasSelectionChanges}
+          onClick={handleAddCategories}
           color="#FF8E53"
         >
-          Add categories to selection
+          Update category selection
         </BigButton>
         <BigButton onClick={onOpenCustomWordBanks} color={PALETTE.blue}>
           Create & browse categories
@@ -2644,6 +2653,24 @@ export default function App() {
     save({ [CUSTOM_CATEGORIES_SORT_MODE_KEY]: normalizedMode });
   }, []);
 
+  const applyCustomSelectionDraft = useCallback((nextEnabledBankIdsRaw) => {
+    const knownIds = new Set(customWordBanks.map((bank) => bank.id));
+    const nextEnabledBankIds = Array.isArray(nextEnabledBankIdsRaw) ? nextEnabledBankIdsRaw : [];
+    const sanitizedEnabledBankIds = Array.from(new Set(
+      nextEnabledBankIds.filter((id) => knownIds.has(id)),
+    ));
+    const enabledSet = new Set(sanitizedEnabledBankIds);
+    const nextSelectedBankIds = selectedCustomBankIds.filter((id) => enabledSet.has(id));
+
+    setEnabledCustomBankIds(sanitizedEnabledBankIds);
+    setSelectedCustomBankIds(nextSelectedBankIds);
+    setSelectCustomWordBanksDraftIds(sanitizedEnabledBankIds);
+    save({
+      enabledCustomBankIds: sanitizedEnabledBankIds,
+      lastSelectedCustomBankIds: nextSelectedBankIds,
+    });
+  }, [customWordBanks, selectedCustomBankIds]);
+
   const handleCreateCustomBank = useCallback(({ name, wordsInput }) => {
     setCustomWordBanks((prev) => {
       const next = createCustomWordBank(prev, { name, wordsInput });
@@ -2886,23 +2913,12 @@ export default function App() {
       <SelectCustomWordBanksScreen
         banks={sortedCustomWordBanks}
         draftEnabledBankIds={selectCustomWordBanksDraftIds}
+        baselineEnabledBankIds={enabledCustomBankIds}
         sortMode={customWordBanksSortMode}
         onDraftEnabledBankIdsChange={setSelectCustomWordBanksDraftIds}
         onSortModeChange={handleCustomWordBanksSortModeChange}
         onApply={(nextEnabledBankIds) => {
-          const knownIds = new Set(customWordBanks.map((bank) => bank.id));
-          const sanitizedEnabledBankIds = Array.from(new Set(
-            nextEnabledBankIds.filter((id) => knownIds.has(id)),
-          ));
-          const enabledSet = new Set(sanitizedEnabledBankIds);
-          const nextSelectedBankIds = selectedCustomBankIds.filter((id) => enabledSet.has(id));
-          setEnabledCustomBankIds(sanitizedEnabledBankIds);
-          setSelectedCustomBankIds(nextSelectedBankIds);
-          setSelectCustomWordBanksDraftIds(sanitizedEnabledBankIds);
-          save({
-            enabledCustomBankIds: sanitizedEnabledBankIds,
-            lastSelectedCustomBankIds: nextSelectedBankIds,
-          });
+          applyCustomSelectionDraft(nextEnabledBankIds);
           returnToScreen(selectCustomWordBanksOrigin);
         }}
         onOpenCustomWordBanks={() => {
@@ -2911,7 +2927,7 @@ export default function App() {
           navigateTo("custom_word_banks");
         }}
         onBack={() => {
-          setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
+          applyCustomSelectionDraft(selectCustomWordBanksDraftIds);
           returnToScreen(selectCustomWordBanksOrigin);
         }}
       />
