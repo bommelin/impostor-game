@@ -1,9 +1,19 @@
 const PREDEFINED_TEMPLATE_ENTRIES = [
 
-  { name: "Capital cities", words: [
-    "Berlin","Brasília","Canberra","Copenhagen","Helsinki","London","Madrid","Oslo","Ottawa","Paris","Rome","Stockholm","Tokyo","Washington D.C.","Beijing",
+  { name: "Famous cities", words: [
+    "Berlin","Vancouver","Phuket","Brasília","Canberra","Copenhagen","Helsinki","London","Madrid","Oslo","Ottawa","Paris","Rome","Stockholm","Tokyo","Washington D.C.","Beijing",
     "Reykjavik","Dublin","Warsaw","Prague","Vienna","Budapest","Athens","Lisbon","Bern","Brussels",
-    "Ankara","Cairo","Bangkok","Seoul","New Delhi","Mexico City","Buenos Aires"
+    "Ankara","Cairo","Bangkok","Seoul","New Delhi","Mexico City","Buenos Aires",
+    "Milano","Göteborg","Malmö","Uppsala","Åre",
+    "Barcelona","Amsterdam","Zurich","Munich","Hamburg","Frankfurt",
+    "New York","Los Angeles","Miami","Las Vegas","Chicago","San Francisco","Boston","Toronto",
+    "Dubai","Abu Dhabi","Doha","Singapore","Hong Kong",
+    "Sydney","Rio de Janeiro","Cape Town","Marrakech",
+    "Shanghai","Kyoto","Osaka",
+    "Bali","Maldives",
+    "Istanbul","Ibiza","Monaco","Nice",
+    "Edinburgh","Manchester",
+    "Val d'Isere","Zermatt","Chamonix"
   ]},
 
   { name: "Professions", words: [
@@ -272,7 +282,7 @@ const FIXED_PREDEFINED_THEME_DEFINITIONS = [
   {
     id: "geography",
     label: "🌍 Geography",
-    itemNames: ["Capital cities", "Famous landmarks"],
+    itemNames: ["Famous cities", "Famous landmarks"],
   },
   {
     id: "sweden",

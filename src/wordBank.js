@@ -5,34 +5,20 @@ export const CATEGORIES = {
     "United Kingdom","Ireland","Netherlands","Switzerland",
     "United States","Canada","Mexico","Brazil","Argentina",
     "Japan","China","South Korea","India","Thailand",
-    "Australia","New Zealand",
-    "Turkey","Greece","Egypt"
-  ],
-
-  "Cities": [
-    "Stockholm","Milano","Göteborg","Malmö","Uppsala","Åre",
-    "London","Paris","Rome","Barcelona","Berlin",
-    "Amsterdam","Prague","Vienna","Athens",
-    "New York","Los Angeles","Miami","Las Vegas",
-    "Tokyo","Seoul","Bangkok","Dubai",
-    "Sydney","Rio de Janeiro","Cape Town",
-    "Shanghai","Beijing","Kyoto",
-    "Bali","Phuket",
-    "Istanbul","Ibiza","Madrid",
-    "Dublin","Oslo","Copenhagen",
-    "Val d'Isere"
+    "Australia","New Zealand", "Russia", "Poland", "Malta",
+    "Turkey","Greece","Egypt", "Nigeria", "Maldives", "North Korea","Kenya", "Tanzania"
   ],
 
   "Celebrities": [
     "Tom Cruise","Greta Thunberg","Avicii","Zlatan Ibrahimovic","Taylor Swift","Björn Borg","Ingemar Stenmark","Henrik Lundqvist","Sarah Sjöström","Armand Duplantis",
     "Max Martin","Robyn","Håkan Hellström","Veronica Maggio","Carola Häggkvist","Petter","Måns Zelmerlöw",
-    "Alicia Vikander","Alexander Skarsgård","Bill Skarsgård","Stellan Skarsgård","Joel Kinnaman",
+    "Alicia Vikander","Alexander Skarsgård","Stellan Skarsgård",
     "Tove Lo","Lykke Li","PewDiePie","Notch", "Markoolio", "Truls Möregårdh",
     "Stefan Löfven","Jimmie Åkesson","Magdalena Andersson","Ulf Kristersson", "Fredrik Reinfeldt",
     "Benjamin Ingrosso","Loreen","Cornelia Jakobs","David Batra","Petra Mede", "JLC",
-    "Zara Larsson","HOV1","Bolaget","Messiah Hallberg","Filip Hammar","Tony Irving",
+    "Zara Larsson","HOV1","Bolaget","Messiah Hallberg","Tony Irving",
     "David Hellenius","Pernilla Wahlgren","Henrik Dorsin","Felix Herngren","Tusse",
-    "Jonas Andersson (RMM)","Kulan RMM","Johan Rheborg","Robert Gustafsson",
+    "Jonas Andersson (RMM)","Johan Rheborg","Robert Gustafsson",
     "Ebba Busch", "Yung Lean","Samir Badran", "Viktor Frisk","Paow","Peter Stormare",
     "Arga snickaren","John Lundvik","Eric Saade","Lotta Schelin","Anis Don Demina", "Dermot Clemenger", "Alexander Ernstberger", "Gunilla Persson",
     "Fröken Snusk", "Pontus Rasmusson", "Edvin Törnblom", "Johanna Nordström",
@@ -79,6 +65,18 @@ export const CATEGORIES = {
     "Walter White","Homer Simpson","Fredrik Schiller"
   ],
 
+  "Professions": [
+    "Police Officer","Firefighter","Security Guard","Bouncer","Doctor","Nurse","Surgeon","Dentist","Psychologist",
+    "Preschool Teacher","High School Teacher","Private Tutor","University Professor", "McDonalds Cashier",
+    "Office Worker","Programmer","Electrician","Plumber","Carpenter","Construction Worker",
+    "Warehouse Worker","Delivery Driver","Taxi Driver","Truck Driver", 
+    "Store Clerk","Cashier","Barista","Waiter","Bartender","Chef",
+    "DJ","Musician","Photographer","Actor","Journalist",
+    "Airline Pilot","Flight Attendant","Personal Trainer","Physiotherapist",
+    "Hair Stylist","Makeup Artist","Real Estate Agent","Car Salesperson",
+    "Streamer","YouTuber","TikTok Creator","Influencer","Professional Gamer","Entrepreneur"
+  ],
+  
   "Objects": [
     "Phone","Snus","Laptop","AirPods","Charger","Powerbank",
     "Wallet","Keys","Backpack",
