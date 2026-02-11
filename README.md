@@ -14,12 +14,15 @@ Felix Bommelin
 ## Run Locally
 ```bash
 npm install
-npm run dev
+npm run dev -- --host
 ```
 
 ## Current Game Loop
 1. **Home**: `New Game`, `Play Again`, `More Categories`
-2. **Choose players**: set player count, impostor count, and names
+2. **Choose players**:
+   - set player count, impostor count, and names
+   - open `Presets` to save/load/edit/delete player presets
+   - presets store player names, player count, and impostor count (max 10)
 3. **Choose Category**:
    - pick built-in categories
    - toggle enabled custom categories (shown as normal tiles under built-ins)
@@ -40,7 +43,7 @@ npm run dev
 - **Built-in categories**: configured in `src/wordBank.js`
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
-  - browse predefined templates
+  - browse predefined templates grouped by theme in the `Browse` tab
   - copy templates into personal custom categories
 - **Custom categories (selection-only)**: Choose Category → `More Categories`
   - controls the **enabled custom categories** list (what appears on Choose Category)
@@ -60,6 +63,7 @@ npm run dev
 
 ## Persistence
 - Saved players and setup values
+- Player presets (`playerPresets`)
 - Last selected categories
 - Enabled custom category IDs
 - Last selected custom category IDs (for round selection)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const PALETTE = {
   bg: "#FFF9F0",
@@ -54,6 +54,7 @@ export default function CustomWordBanksScreen({
   selectedBankIds,
   selectable,
   predefinedWordBank,
+  predefinedWordBankThemes,
   nextDefaultName,
   backButtonLabel = "Back",
   onBack,
@@ -71,18 +72,54 @@ export default function CustomWordBanksScreen({
   const [activeTab, setActiveTab] = useState("my");
   const [mySearchQuery, setMySearchQuery] = useState("");
   const [browseSearchQuery, setBrowseSearchQuery] = useState("");
+  const [expandedThemeIds, setExpandedThemeIds] = useState([]);
 
-  const predefinedBanks = Object.entries(predefinedWordBank || {}).map(([name, words]) => ({
-    name,
-    words: Array.isArray(words) ? words : [],
-  }));
   const normalizedMySearchQuery = mySearchQuery.trim().toLocaleLowerCase();
   const normalizedBrowseSearchQuery = browseSearchQuery.trim().toLocaleLowerCase();
+  const isBrowseSearching = normalizedBrowseSearchQuery.length > 0;
+  const predefinedBanks = useMemo(
+    () => Object.entries(predefinedWordBank || {}).map(([name, words]) => ({
+      name,
+      words: Array.isArray(words) ? words : [],
+    })).filter((bank) => bank.name && bank.words.length > 0),
+    [predefinedWordBank],
+  );
+  const predefinedThemes = useMemo(() => {
+    if (!Array.isArray(predefinedWordBankThemes) || predefinedWordBankThemes.length === 0) {
+      return [{ id: "all", label: "All categories", items: predefinedBanks }];
+    }
+
+    return predefinedWordBankThemes
+      .map((theme) => ({
+        id: String(theme?.id ?? "").trim(),
+        label: String(theme?.label ?? "").trim(),
+        items: Array.isArray(theme?.items)
+          ? theme.items.map((item) => ({
+            name: String(item?.name ?? "").trim(),
+            words: Array.isArray(item?.words) ? item.words : [],
+          })).filter((item) => item.name && item.words.length > 0)
+          : [],
+      }))
+      .filter((theme) => theme.id);
+  }, [predefinedBanks, predefinedWordBankThemes]);
+  const browseThemeSections = useMemo(() => (
+    predefinedThemes
+      .map((theme) => {
+        const matchingItems = theme.items.filter((item) =>
+          item.name.toLocaleLowerCase().includes(normalizedBrowseSearchQuery),
+        );
+        const visibleItems = isBrowseSearching ? matchingItems : theme.items;
+        return {
+          ...theme,
+          isExpanded: isBrowseSearching ? matchingItems.length > 0 : expandedThemeIds.includes(theme.id),
+          previewNames: theme.items.slice(0, 3).map((item) => item.name),
+          visibleItems,
+        };
+      })
+      .filter((theme) => theme.visibleItems.length > 0)
+  ), [expandedThemeIds, isBrowseSearching, normalizedBrowseSearchQuery, predefinedThemes]);
   const filteredMyBanks = banks.filter((bank) =>
     String(bank.name ?? "").toLocaleLowerCase().includes(normalizedMySearchQuery),
-  );
-  const filteredPredefinedBanks = predefinedBanks.filter((bank) =>
-    String(bank.name ?? "").toLocaleLowerCase().includes(normalizedBrowseSearchQuery),
   );
 
   const openCreate = () => {
@@ -133,6 +170,23 @@ export default function CustomWordBanksScreen({
     if (tab === "browse") closeEditor();
   };
 
+  const toggleThemeExpansion = (themeId) => {
+    if (isBrowseSearching) return;
+
+    setExpandedThemeIds((prevExpandedThemeIds) => {
+      if (prevExpandedThemeIds.includes(themeId)) {
+        return prevExpandedThemeIds.filter((id) => id !== themeId);
+      }
+      return [...prevExpandedThemeIds, themeId];
+    });
+  };
+
+  const isPredefinedBankSaved = (bank) => banks.some((customBank) =>
+    customBank.name === bank.name
+    && customBank.words.length === bank.words.length
+    && customBank.words.every((word, index) => word === bank.words[index]),
+  );
+
   return (
     <div style={{
       height: "100dvh",
@@ -155,7 +209,7 @@ export default function CustomWordBanksScreen({
       `}</style>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <h1 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 34, color: PALETTE.primary }}>
-          More Categories
+          My Categories
         </h1>
       </div>
 
@@ -441,62 +495,115 @@ export default function CustomWordBanksScreen({
             padding: 12,
             marginBottom: 14,
           }}>
-            {filteredPredefinedBanks.length === 0 ? (
+            {browseThemeSections.length === 0 ? (
               <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
                 {normalizedBrowseSearchQuery ? "No results" : "No predefined categories available"}
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {filteredPredefinedBanks.map((bank) => {
-                const isSaved = banks.some((customBank) =>
-                  customBank.name === bank.name
-                  && customBank.words.length === bank.words.length
-                  && customBank.words.every((word, index) => word === bank.words[index]),
-                );
-
-                return (
+                {browseThemeSections.map((theme) => (
                   <div
-                    key={bank.name}
+                    key={theme.id}
                     style={{
                       borderRadius: 12,
                       border: `2px solid ${PALETTE.border}`,
                       background: "#FFF",
-                      padding: "10px 12px",
-                      display: "flex",
-                      gap: 10,
-                      alignItems: "center",
-                      justifyContent: "space-between",
+                      overflow: "hidden",
                     }}
                   >
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontWeight: 800, fontSize: 16, color: PALETTE.text }}>
-                        {bank.name}
-                      </p>
-                      <p style={{ fontSize: 12, color: PALETTE.muted, fontWeight: 700 }}>
-                        {bank.words.slice(0, 3).join(", ")}
-                      </p>
-                    </div>
                     <button
-                      disabled={isSaved}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isSaved) onSavePredefinedBank?.(bank);
-                      }}
+                      onClick={() => toggleThemeExpansion(theme.id)}
                       style={{
-                        borderRadius: 10,
-                        background: isSaved ? "#D4D8DF" : PALETTE.blue,
-                        color: "#FFF",
-                        fontSize: 12,
-                        padding: "6px 12px",
-                        boxShadow: isSaved ? "none" : "0 3px 0 #37939B",
-                        opacity: isSaved ? 0.8 : 1,
+                        width: "100%",
+                        background: "#FFF",
+                        color: PALETTE.text,
+                        padding: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        borderBottom: theme.isExpanded ? `1px solid ${PALETTE.border}` : "none",
+                        cursor: isBrowseSearching ? "default" : "pointer",
                       }}
                     >
-                      {isSaved ? "Saved" : "Save"}
+                      <span
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          textAlign: "left",
+                          minWidth: 0,
+                        }}
+                      >
+                        {theme.label}
+                      </span>
+                      <span style={{ fontSize: 14, color: PALETTE.muted, fontWeight: 800 }}>
+                        {theme.isExpanded ? "Hide" : "Show"}
+                      </span>
                     </button>
+
+                    {theme.isExpanded ? (
+                      <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                        {theme.visibleItems.map((bank) => {
+                          const isSaved = isPredefinedBankSaved(bank);
+
+                          return (
+                            <div
+                              key={bank.name}
+                              style={{
+                                borderRadius: 12,
+                                border: `2px solid ${PALETTE.border}`,
+                                background: "#FFF",
+                                padding: "10px 12px",
+                                display: "flex",
+                                gap: 10,
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontWeight: 800, fontSize: 16, color: PALETTE.text }}>
+                                  {bank.name}
+                                </p>
+                                <p style={{ fontSize: 12, color: PALETTE.muted, fontWeight: 700 }}>
+                                  {bank.words.slice(0, 3).join(", ")}
+                                </p>
+                              </div>
+                              <button
+                                disabled={isSaved}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isSaved) onSavePredefinedBank?.(bank);
+                                }}
+                                style={{
+                                  borderRadius: 10,
+                                  background: isSaved ? "#D4D8DF" : PALETTE.blue,
+                                  color: "#FFF",
+                                  fontSize: 12,
+                                  padding: "6px 12px",
+                                  boxShadow: isSaved ? "none" : "0 3px 0 #37939B",
+                                  opacity: isSaved ? 0.8 : 1,
+                                }}
+                              >
+                                {isSaved ? "Saved" : "Save"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p
+                        style={{
+                          padding: "0 12px 12px",
+                          fontSize: 12,
+                          color: PALETTE.muted,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {theme.previewNames.join(", ")}
+                      </p>
+                    )}
                   </div>
-                );
-              })}
+                ))}
               </div>
             )}
           </div>

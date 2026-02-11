@@ -50,6 +50,7 @@ Implementation notes:
    - Exit
 2. Choose Players (single screen)
    - Player count +/-; name fields; impostor count +/- with constraint
+   - Player Presets button in the name section (save/load/edit/delete presets, max 10)
    - Continue → Choose Categories
 3. Choose Categories
    - Select one or more categories
@@ -80,6 +81,7 @@ Custom Categories screen behavior:
 Persist locally:
 - players list (names)
 - last N and K
+- player presets (`playerPresets`)
 - last selected categories (optional but recommended)
 
 ## Engineering guidance
@@ -88,6 +90,7 @@ Persist locally:
 - Back navigation should use a history stack and return to the previously visited screen, rather than hardcoded destinations.
 - Prefer small, testable pure functions for: assigning roles, picking word, chaos logic.
 - When changing behavior, update this AGENTS.md if it affects rules/flow.
+- When adding larger features, update `README.md` in the same change so setup/usage docs stay current.
 
 ## Emoji usage rule (UI consistency)
 
