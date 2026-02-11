@@ -682,7 +682,7 @@ function HomeScreen({
   const hintText = getInstallHint();
 
   return (
-    <Screen style={{ justifyContent: "center", alignItems: "center", gap: 0 }}>
+    <Screen style={{ justifyContent: "center", alignItems: "center", gap: 0, overflowX: "hidden" }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 32 }}>
         <h1 style={{
           fontFamily: "'Archivo Black', 'Fredoka One', sans-serif",
@@ -738,7 +738,7 @@ function HomeScreen({
           bottom: 10,
           left: "50%",
           transform: "translateX(-50%)",
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: 600,
           color: "#9A9A9A",
           letterSpacing: 0.2,
@@ -1490,7 +1490,7 @@ function CategoriesScreen({
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
+        <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53" small>
           More Categories
         </BigButton>
       </div>
