@@ -27,7 +27,7 @@ export const CATEGORIES = {
     "Tom Cruise","Greta Thunberg","Avicii","Zlatan Ibrahimovic","Taylor Swift","Björn Borg","Ingemar Stenmark","Henrik Lundqvist","Sarah Sjöström","Armand Duplantis",
     "Max Martin","Robyn","Håkan Hellström","Veronica Maggio","Carola Häggkvist","Petter","Måns Zelmerlöw",
     "Alicia Vikander","Alexander Skarsgård","Bill Skarsgård","Stellan Skarsgård","Joel Kinnaman",
-    "Tove Lo","Lykke Li","PewDiePie","Notch", "Markoolio",
+    "Tove Lo","Lykke Li","PewDiePie","Notch", "Markoolio", "Truls Möregårdh",
     "Stefan Löfven","Jimmie Åkesson","Magdalena Andersson","Ulf Kristersson", "Fredrik Reinfeldt",
     "Benjamin Ingrosso","Loreen","Cornelia Jakobs","David Batra","Petra Mede", "JLC",
     "Zara Larsson","HOV1","Bolaget","Messiah Hallberg","Filip Hammar","Tony Irving",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
   CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED,
@@ -68,6 +68,7 @@ export default function CustomWordBanksScreen({
   predefinedWordBank,
   predefinedWordBankThemes,
   nextDefaultName,
+  initialTab = "browse",
   backButtonLabel = "Back",
   onBack,
   onToggleSelection,
@@ -76,6 +77,7 @@ export default function CustomWordBanksScreen({
   onDeleteBank,
   onClearAllBanks,
   onSavePredefinedBank,
+  onOpenImportExport,
   sortMode = CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
   onSortModeChange,
 }) {
@@ -85,7 +87,7 @@ export default function CustomWordBanksScreen({
   const [draftWords, setDraftWords] = useState("");
   const [pendingDeleteBank, setPendingDeleteBank] = useState(null);
   const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("browse");
+  const [activeTab, setActiveTab] = useState(initialTab === "my" ? "my" : "browse");
   const [mySearchQuery, setMySearchQuery] = useState("");
   const [browseSearchQuery, setBrowseSearchQuery] = useState("");
   const [expandedThemeIds, setExpandedThemeIds] = useState([]);
@@ -138,6 +140,10 @@ export default function CustomWordBanksScreen({
     String(bank.name ?? "").toLocaleLowerCase().includes(normalizedMySearchQuery),
   );
   const hasSavedCategories = banks.length > 0;
+
+  useEffect(() => {
+    setActiveTab(initialTab === "my" ? "my" : "browse");
+  }, [initialTab]);
 
   const openCreate = () => {
     setActiveTab("my");
@@ -292,6 +298,21 @@ export default function CustomWordBanksScreen({
             }}
           >
             + Create New 
+          </button>
+          <button
+            onClick={onOpenImportExport}
+            style={{
+              width: "100%",
+              borderRadius: 14,
+              background: PALETTE.muted,
+              color: "#FFF",
+              boxShadow: "0 4px 0 #4A4A4A",
+              padding: "11px 16px",
+              fontSize: 16,
+              marginBottom: 14,
+            }}
+          >
+            Import / Export
           </button>
 
           <input

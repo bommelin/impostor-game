@@ -70,6 +70,12 @@ Implementation notes:
    - Choose Categories (same as above)
    - Edit Players → Choose Players
    - Exit
+8. Import / Export Categories
+   - Reachable from "My Custom Categories" (Saved tab)
+   - Export selected saved custom categories to clipboard as formatted text
+   - Import formatted text into saved custom categories with inline validation errors
+   - Name collisions use an in-app overwrite confirmation modal
+   - Back returns to "My Custom Categories" with the Saved tab active
 
 Custom Categories screen behavior:
 - Includes tabs: "My Custom Categories" and "Browse".
@@ -86,6 +92,8 @@ Custom Categories screen behavior:
   - Recently played (uses `lastPlayedAt`, descending; never-played at bottom)
   - Order of saving (uses `createdAt`, ascending)
 - "My Custom Categories" (Saved tab) includes a destructive `Clear all` action that uses an in-app confirmation modal and deletes all saved custom categories.
+- "My Custom Categories" (Saved tab) includes an `Import / Export` secondary full-width button directly under `+ Create New` that opens the dedicated Import / Export Categories screen.
+- Import / Export `Back` returns to "My Custom Categories" with the Saved tab active.
 
 ## Persistence
 Persist locally:

@@ -29,7 +29,7 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
     "Zlatan Ibrahimovic","JLC", "Zara Larsson","Björn Borg","Ingemar Stenmark","Henrik Lundqvist","Sarah Sjöström","Armand Duplantis",
     "Avicii","Max Martin","Robyn","Håkan Hellström","Veronica Maggio","Carola Häggkvist","Petter","Måns Zelmerlöw",
     "Alicia Vikander","Alexander Skarsgård","Bill Skarsgård","Stellan Skarsgård","Joel Kinnaman",
-    "Tove Lo","Lykke Li","PewDiePie","Notch","Greta Thunberg", "Markoolio",
+    "Tove Lo","Lykke Li","PewDiePie","Notch","Greta Thunberg", "Markoolio", "Truls Möregårdh",
     "Stefan Löfven","Jimmie Åkesson","Magdalena Andersson","Ulf Kristersson", "Fredrik Reinfeldt",
     "Benjamin Ingrosso","Loreen","Cornelia Jakobs","David Batra","Petra Mede", 
     "HOV1","Bolaget","Messiah Hallberg","Filip Hammar","Tony Irving",
@@ -140,8 +140,8 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
   ]},
 
   { name: "Athletes", words: [
-    "Lionel Messi","Cristiano Ronaldo","Neymar","Diego Maradona","Pelé","Ronaldinho","David Beckham",
-    "LeBron James","Michael Jordan","Kobe Bryant","Kevin Durant","Shaquille O'Neal",
+    "Lionel Messi","Sarah Sjöström","Shaquille O'Neal","Cristiano Ronaldo","Neymar","Diego Maradona","Pelé","Ronaldinho","David Beckham",
+    "LeBron James","Michael Jordan","Kobe Bryant","Kevin Durant",
     "Tom Brady","Babe Ruth",
     "Roger Federer","Serena Williams","Naomi Osaka",
     "Tiger Woods",
@@ -150,7 +150,7 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
     "Usain Bolt","Michael Phelps",
     "Lewis Hamilton","Max Verstappen","Michael Schumacher",
     "Arnold Schwarzenegger","The Rock",
-    "Zlatan Ibrahimović","Björn Borg","Sarah Sjöström","Armand Duplantis","Henrik Lundqvist","Ingemar Stenmark"
+    "Zlatan Ibrahimović","Björn Borg","Armand Duplantis","Henrik Lundqvist","Ingemar Stenmark", "Truls Möregårdh"
   ]},
 
   { name: "Allsvenskan teams", words: [

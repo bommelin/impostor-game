@@ -44,10 +44,18 @@ npm run dev -- --host
 - **Built-in categories**: configured in `src/wordBank.js`
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
+  - includes `Import / Export` in the `Saved` tab (directly under `+ Create New`)
   - clear all custom categories with in-app confirmation
   - browse predefined templates grouped by theme in the `Browse` tab
   - copy templates into personal custom categories
   - saved categories support sorting by `Recently played` or `Order of saving`
+- **Import / Export categories**:
+  - entry point: More Categories (Saved tab) → `Import / Export`
+  - export selected saved custom categories to clipboard as:
+    `[name:Category name, words:word1,word2]|[name:Another, words:wordA,wordB]`
+  - import from the same text format with inline validation errors
+  - name collisions require in-app overwrite confirmation (`Cancel` / `Overwrite`)
+  - `Back` returns to More Categories with the `Saved` tab open
 - **Custom categories (selection-only)**: Choose Category → `More Categories`
   - controls the **enabled custom categories** list (what appears on Choose Category)
   - `Add categories to selection` commits enabled categories

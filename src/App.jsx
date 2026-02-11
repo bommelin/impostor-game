@@ -18,6 +18,12 @@ import {
   normalizeCustomWordBankSortMode,
   sortCustomWordBanks,
 } from "./customWordBanks";
+import {
+  formatCustomCategoriesForExport,
+  IMPORT_EXPORT_FORMAT_EXAMPLE,
+  normalizeCategoryNameKey,
+  parseImportCategoriesInput,
+} from "./importExportCategories";
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
@@ -644,7 +650,12 @@ function SwipeReveal({ onReveal, revealed, children }) {
 
 // ─── SCREENS ──────────────────────────────────────────────────────────────────
 
-function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers }) {
+function HomeScreen({
+  onStart,
+  onPlayAgain,
+  onOpenCustomWordBanks,
+  hasPlayers,
+}) {
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center", gap: 0 }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 32 }}>
@@ -777,7 +788,11 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
           <PillButton
             color={PALETTE.muted}
             onClick={onOpenPresets}
-            style={{ padding: "6px 12px", fontSize: 12 }}
+            style={{
+              padding: "6px 12px",
+              fontSize: 12,
+              boxShadow: "0 3px 0 #4A4A4A",
+            }}
           >
             Presets
           </PillButton>
@@ -1605,10 +1620,409 @@ function SelectCustomWordBanksScreen({
   );
 }
 
+function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
+  const [selectedExportIds, setSelectedExportIds] = useState([]);
+  const [importText, setImportText] = useState("");
+  const [exportFeedback, setExportFeedback] = useState({ type: "", message: "" });
+  const [importFeedback, setImportFeedback] = useState({ type: "", message: "" });
+  const [overwriteSession, setOverwriteSession] = useState(null);
+
+  useEffect(() => {
+    const knownIds = new Set(banks.map((bank) => bank.id));
+    setSelectedExportIds((prev) => prev.filter((bankId) => knownIds.has(bankId)));
+  }, [banks]);
+
+  useEffect(() => {
+    if (!exportFeedback.message) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setExportFeedback({ type: "", message: "" });
+    }, 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [exportFeedback]);
+
+  useEffect(() => {
+    if (!importFeedback.message) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setImportFeedback({ type: "", message: "" });
+    }, 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [importFeedback]);
+
+  const selectedExportIdSet = useMemo(() => new Set(selectedExportIds), [selectedExportIds]);
+  const selectedExportBanks = useMemo(
+    () => banks.filter((bank) => selectedExportIdSet.has(bank.id)),
+    [banks, selectedExportIdSet],
+  );
+  const hasExportBanks = banks.length > 0;
+  const allExportBanksSelected = hasExportBanks && selectedExportIds.length === banks.length;
+  const isExportDisabled = selectedExportBanks.length === 0;
+
+  const importValidation = useMemo(() => {
+    const trimmedInput = importText.trim();
+    if (!trimmedInput) return { categories: [], error: "", isValid: false };
+    const parsed = parseImportCategoriesInput(trimmedInput);
+    return {
+      categories: parsed.categories,
+      error: parsed.error,
+      isValid: !parsed.error,
+    };
+  }, [importText]);
+  const importErrorMessage = importText.trim() ? importValidation.error : "";
+  const isImportDisabled = !importValidation.isValid || !importText.trim();
+
+  const toggleExportSelection = (bankId) => {
+    setSelectedExportIds((prev) => (
+      prev.includes(bankId)
+        ? prev.filter((id) => id !== bankId)
+        : [...prev, bankId]
+    ));
+  };
+
+  const toggleSelectAllExport = () => {
+    if (!hasExportBanks) return;
+    setSelectedExportIds(allExportBanksSelected ? [] : banks.map((bank) => bank.id));
+  };
+
+  const completeImport = (categories, overwriteNameKeys) => {
+    onImportCategories(categories, overwriteNameKeys);
+    setImportText("");
+    setImportFeedback({ type: "success", message: "Imported!" });
+    setOverwriteSession(null);
+  };
+
+  const startImport = () => {
+    if (!importValidation.isValid) return;
+
+    const existingByNameKey = new Map(
+      banks.map((bank) => [normalizeCategoryNameKey(bank.name), bank.name]),
+    );
+    const conflicts = [];
+    const seenConflictKeys = new Set();
+
+    for (const category of importValidation.categories) {
+      const nameKey = normalizeCategoryNameKey(category.name);
+      if (!existingByNameKey.has(nameKey) || seenConflictKeys.has(nameKey)) continue;
+      seenConflictKeys.add(nameKey);
+      conflicts.push({
+        nameKey,
+        displayName: existingByNameKey.get(nameKey) || category.name,
+      });
+    }
+
+    if (conflicts.length === 0) {
+      completeImport(importValidation.categories, new Set());
+      return;
+    }
+
+    setOverwriteSession({
+      categories: importValidation.categories,
+      conflicts,
+      conflictIndex: 0,
+      overwriteNameKeys: [],
+    });
+  };
+
+  const handleOverwriteDecision = (shouldOverwrite) => {
+    if (!overwriteSession) return;
+
+    const currentConflict = overwriteSession.conflicts[overwriteSession.conflictIndex];
+    const nextOverwriteNameKeys = shouldOverwrite
+      ? [...overwriteSession.overwriteNameKeys, currentConflict.nameKey]
+      : overwriteSession.overwriteNameKeys;
+    const nextConflictIndex = overwriteSession.conflictIndex + 1;
+
+    if (nextConflictIndex >= overwriteSession.conflicts.length) {
+      completeImport(overwriteSession.categories, new Set(nextOverwriteNameKeys));
+      return;
+    }
+
+    setOverwriteSession({
+      ...overwriteSession,
+      conflictIndex: nextConflictIndex,
+      overwriteNameKeys: nextOverwriteNameKeys,
+    });
+  };
+
+  const handleExport = async () => {
+    if (isExportDisabled) return;
+
+    const exportText = formatCustomCategoriesForExport(selectedExportBanks);
+
+    try {
+      if (!navigator?.clipboard?.writeText) throw new Error("clipboard_not_available");
+      await navigator.clipboard.writeText(exportText);
+      setExportFeedback({ type: "success", message: "Copied to clipboard!" });
+    } catch {
+      setExportFeedback({ type: "error", message: "Could not copy. Please try again." });
+    }
+  };
+
+  const activeOverwriteConflict = overwriteSession
+    ? overwriteSession.conflicts[overwriteSession.conflictIndex]
+    : null;
+
+  return (
+    <Screen>
+      <div style={{ paddingTop: 24, marginBottom: 16 }}>
+        <Title>Import / Export Categories</Title>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <section style={{
+          background: "#FFF",
+          borderRadius: 16,
+          border: `2px solid ${PALETTE.border}`,
+          padding: "14px 12px",
+        }}>
+          <p style={{
+            fontFamily: "'Fredoka One', cursive",
+            fontSize: 24,
+            color: PALETTE.text,
+            marginBottom: 8,
+            textAlign: "center",
+          }}>
+            Import
+          </p>
+          <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
+            1. Format text like:
+          </p>
+          <p style={{
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 12,
+            lineHeight: 1.35,
+            background: "#F6F0E8",
+            borderRadius: 10,
+            padding: "8px 10px",
+            marginBottom: 6,
+            wordBreak: "break-word",
+            userSelect: "text",
+            WebkitUserSelect: "text",
+            cursor: "text",
+          }}>
+            {IMPORT_EXPORT_FORMAT_EXAMPLE}
+          </p>
+          <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35, marginBottom: 10 }}>
+            2. Paste and click Import
+          </p>
+
+          <textarea
+            value={importText}
+            onChange={(e) => {
+              setImportText(e.target.value);
+              setImportFeedback({ type: "", message: "" });
+            }}
+            rows={5}
+            placeholder="Paste texte here"
+            style={{
+              width: "100%",
+              minHeight: 120,
+              resize: "vertical",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `2px solid ${importErrorMessage ? "#C0392B" : PALETTE.border}`,
+              fontSize: 16,
+              fontWeight: 600,
+              fontFamily: "'Nunito', sans-serif",
+              background: "#FFF",
+              color: PALETTE.text,
+              marginBottom: 6,
+            }}
+          />
+
+          {importErrorMessage && (
+            <p style={{
+              color: "#C0392B",
+              fontWeight: 700,
+              fontSize: 13,
+              lineHeight: 1.35,
+              marginBottom: 10,
+            }}>
+              {importErrorMessage}
+            </p>
+          )}
+
+          {importFeedback.message && (
+            <p style={{
+              color: importFeedback.type === "error" ? "#C0392B" : PALETTE.accent,
+              fontWeight: 700,
+              fontSize: 13,
+              lineHeight: 1.35,
+              marginBottom: 10,
+            }}>
+              {importFeedback.message}
+            </p>
+          )}
+
+          <BigButton onClick={startImport} color={PALETTE.primary} disabled={isImportDisabled}>
+            Import
+          </BigButton>
+        </section>
+
+        <section style={{
+          background: "#FFF",
+          borderRadius: 16,
+          border: `2px solid ${PALETTE.border}`,
+          padding: "14px 12px",
+        }}>
+          <p style={{
+            fontFamily: "'Fredoka One', cursive",
+            fontSize: 24,
+            color: PALETTE.text,
+            marginBottom: 8,
+            textAlign: "center",
+          }}>
+            Export
+          </p>
+          <div style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 8,
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
+                1. Choose categories you want to export
+              </p>
+              <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
+                2. Click Export (copies to clipboard)
+              </p>
+            </div>
+            <PillButton
+              color={PALETTE.muted}
+              disabled={!hasExportBanks}
+              onClick={toggleSelectAllExport}
+              style={{
+                padding: "5px 9px",
+                fontSize: 11,
+                lineHeight: 1.1,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxShadow: hasExportBanks ? "0 3px 0 #4A4A4A" : "none",
+                cursor: hasExportBanks ? "pointer" : "not-allowed",
+              }}
+            >
+              {allExportBanksSelected ? "Deselect all" : "Select all"}
+            </PillButton>
+          </div>
+
+          <div style={{
+            borderRadius: 12,
+            border: `2px solid ${PALETTE.border}`,
+            padding: 8,
+            background: "#FFF",
+            maxHeight: 220,
+            overflowY: "auto",
+            marginBottom: 10,
+          }}>
+            {banks.length === 0 ? (
+              <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
+                No custom categories available
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {banks.map((bank) => {
+                  const isSelected = selectedExportIdSet.has(bank.id);
+                  return (
+                    <button
+                      key={bank.id}
+                      onClick={() => toggleExportSelection(bank.id)}
+                      style={{
+                        width: "100%",
+                        borderRadius: 10,
+                        border: `2px solid ${isSelected ? PALETTE.primary : PALETTE.border}`,
+                        background: isSelected ? "#FFF0F0" : "#FFF",
+                        padding: "9px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        textAlign: "left",
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontWeight: 800, fontSize: 15, color: PALETTE.text }}>
+                          {bank.name}
+                        </p>
+                        <p style={{ fontSize: 12, color: PALETTE.muted, fontWeight: 700 }}>
+                          {bank.words.length} word{bank.words.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: isSelected ? PALETTE.primary : "#AAA",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {isSelected ? "Selected" : "Tap to select"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <BigButton onClick={handleExport} color={PALETTE.primary} disabled={isExportDisabled}>
+            Export
+          </BigButton>
+          {exportFeedback.message && (
+            <p style={{
+              marginTop: 8,
+              textAlign: "center",
+              fontWeight: 700,
+              fontSize: 13,
+              color: exportFeedback.type === "error" ? "#C0392B" : PALETTE.accent,
+            }}>
+              {exportFeedback.message}
+            </p>
+          )}
+        </section>
+      </div>
+
+      <BackButton onClick={onBack} style={{ marginTop: 12 }} />
+
+      {activeOverwriteConflict && (
+        <AppModal maxWidth={340}>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.text,
+            fontSize: 24,
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}>
+            Overwrite existing category?
+          </p>
+          <p style={{
+            textAlign: "center",
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.35,
+            marginBottom: 14,
+          }}>
+            '{activeOverwriteConflict.displayName}' already exists. Replace it with the imported version?
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <PillButton color={PALETTE.muted} onClick={() => handleOverwriteDecision(false)}>
+              Cancel
+            </PillButton>
+            <PillButton color={PALETTE.primary} onClick={() => handleOverwriteDecision(true)}>
+              Overwrite
+            </PillButton>
+          </div>
+        </AppModal>
+      )}
+    </Screen>
+  );
+}
+
 function PassScreen({ name, onReady }) {
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
-      <div className="pop" style={{ textAlign: "center", width: "100%" }}>
+      <div style={{ textAlign: "center", width: "100%" }}>
         <div style={{ fontSize: 72, marginBottom: 16 }}>📱</div>
         <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 28,
           color: PALETTE.text, marginBottom: 8 }}>Pass the phone to</h2>
@@ -1704,6 +2118,7 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
 
 function DiscussionBriefScreen({ starterName, categories, impostorCount, onStartDiscussion }) {
   const initialTimerMinutes = useRef(clampTimerMinutes(load()[TIMER_STORAGE_KEY]));
+  const hasVibratedForTimeUp = useRef(false);
   const [selectedMinutes, setSelectedMinutes] = useState(initialTimerMinutes.current);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(initialTimerMinutes.current * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -1711,12 +2126,20 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   const [hasStarted, setHasStarted] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const triggerTimerCompleteHaptic = useCallback(() => {
+    if (hasVibratedForTimeUp.current) return;
+    hasVibratedForTimeUp.current = true;
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate([80, 100, 80]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isRunning) return undefined;
     const timerId = window.setInterval(() => {
       setTimeLeftSeconds((prev) => {
         if (prev <= 1) {
+          triggerTimerCompleteHaptic();
           setIsRunning(false);
           setIsPaused(false);
           setIsTimeUp(true);
@@ -1726,11 +2149,12 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
       });
     }, 1000);
     return () => window.clearInterval(timerId);
-  }, [isRunning]);
+  }, [isRunning, triggerTimerCompleteHaptic]);
 
   const handleMinuteChange = (delta) => {
     if (hasStarted) return;
     const nextMinutes = clampTimerMinutes(selectedMinutes + delta);
+    hasVibratedForTimeUp.current = false;
     setSelectedMinutes(nextMinutes);
     setTimeLeftSeconds(nextMinutes * 60);
     setIsTimeUp(false);
@@ -1763,11 +2187,15 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
     setIsPaused(false);
     setHasStarted(false);
     setIsTimeUp(false);
+    hasVibratedForTimeUp.current = false;
     setTimeLeftSeconds(selectedMinutes * 60);
     setShowResetConfirm(false);
   };
 
   const handleEndTimer = () => {
+    if (timeLeftSeconds > 0) {
+      triggerTimerCompleteHaptic();
+    }
     setIsRunning(false);
     setIsPaused(false);
     setHasStarted(true);
@@ -1782,7 +2210,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
       </div>
 
       {/* Starting player hero card */}
-      <div className="pop" style={{
+      <div style={{
         background: "linear-gradient(135deg, #FF8E53, #FFB347)",
         borderRadius: 22, padding: "18px 20px", textAlign: "center",
         marginBottom: 14, boxShadow: "0 8px 24px rgba(255,142,83,0.3)",
@@ -1953,7 +2381,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
 function PostGameScreen({ onPlayAgain, onBackToHome, everyoneWasImpostor }) {
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
-      <div className="pop" style={{ textAlign: "center", marginBottom: 36 }}>
+      <div style={{ textAlign: "center", marginBottom: 36 }}>
         <div style={{ fontSize: 72, marginBottom: 8 }}>🎉</div>
         <Title>Round Over!</Title>
       </div>
@@ -1990,7 +2418,7 @@ function PostGameScreen({ onPlayAgain, onBackToHome, everyoneWasImpostor }) {
 }
 
 // ─── GAME STATE MACHINE ──────────────────────────────────────────────────────
-// screens: home | players | player_presets | categories | custom_word_banks | select_custom_word_banks | reveal_loop | discussion | postgame
+// screens: home | players | player_presets | categories | custom_word_banks | select_custom_word_banks | import_export_categories | reveal_loop | discussion | postgame
 
 export default function App() {
   const stored = load();
@@ -2015,6 +2443,7 @@ export default function App() {
   const [screenHistory, setScreenHistory] = useState(["home"]);
   const screen = screenHistory[screenHistory.length - 1];
   const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
+  const [customWordBanksInitialTab, setCustomWordBanksInitialTab] = useState("browse");
   const [players, setPlayers] = useState(stored.savedPlayers || []);
   const [k, setK] = useState(stored.lastImpostorCount || 1);
   const [playersSetupDraft, setPlayersSetupDraft] = useState(() => createPlayersSetupDraft({
@@ -2162,6 +2591,40 @@ export default function App() {
     });
   }, []);
 
+  const handleImportCustomCategories = useCallback((categories, overwriteNameKeys) => {
+    const overwriteSet = overwriteNameKeys instanceof Set
+      ? overwriteNameKeys
+      : new Set(Array.isArray(overwriteNameKeys) ? overwriteNameKeys : []);
+
+    setCustomWordBanks((prev) => {
+      let next = [...prev];
+
+      for (const category of categories) {
+        const name = String(category?.name ?? "").trim();
+        const nameKey = normalizeCategoryNameKey(name);
+        if (!name || !nameKey) continue;
+
+        const existingBank = next.find((bank) => normalizeCategoryNameKey(bank.name) === nameKey);
+        if (existingBank) {
+          if (!overwriteSet.has(nameKey)) continue;
+          next = updateCustomWordBank(next, existingBank.id, {
+            name,
+            wordsInput: category.words,
+          });
+          continue;
+        }
+
+        next = createCustomWordBank(next, {
+          name,
+          wordsInput: category.words,
+        });
+      }
+
+      saveCustomWordBanks(next);
+      return next;
+    });
+  }, []);
+
   const startRound = useCallback(() => {
     const enabledCustomBankSet = new Set(enabledCustomBankIds);
     const selectedCustomBanks = customWordBanks.filter((bank) =>
@@ -2234,6 +2697,7 @@ export default function App() {
         onPlayAgain={() => navigateTo("categories")}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("home");
+          setCustomWordBanksInitialTab("browse");
           navigateTo("custom_word_banks");
         }}
       />
@@ -2330,6 +2794,7 @@ export default function App() {
         }}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("select_custom_word_banks");
+          setCustomWordBanksInitialTab("browse");
           navigateTo("custom_word_banks");
         }}
         onBack={() => {
@@ -2350,6 +2815,7 @@ export default function App() {
         predefinedWordBank={PREDEFINED_CUSTOM_WORD_BANK}
         predefinedWordBankThemes={PREDEFINED_CUSTOM_WORD_BANK_THEMES}
         nextDefaultName={getNextCustomWordBankName(customWordBanks)}
+        initialTab={customWordBanksInitialTab}
         sortMode={customWordBanksSortMode}
         onSortModeChange={handleCustomWordBanksSortModeChange}
         backButtonLabel={customWordBanksOrigin === "categories" ? "Add categories to selection" : "Back"}
@@ -2360,6 +2826,21 @@ export default function App() {
         onDeleteBank={handleDeleteCustomBank}
         onClearAllBanks={handleClearAllCustomBanks}
         onSavePredefinedBank={handleSavePredefinedBank}
+        onOpenImportExport={() => {
+          setCustomWordBanksInitialTab("my");
+          navigateTo("import_export_categories");
+        }}
+      />
+    </>
+  );
+
+  if (screen === "import_export_categories") return (
+    <>
+      <GlobalStyle />
+      <ImportExportCategoriesScreen
+        banks={sortedCustomWordBanks}
+        onImportCategories={handleImportCustomCategories}
+        onBack={goBack}
       />
     </>
   );
