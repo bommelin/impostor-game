@@ -43,14 +43,17 @@ npm run dev -- --host
 - **Built-in categories**: configured in `src/wordBank.js`
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
+  - clear all custom categories with in-app confirmation
   - browse predefined templates grouped by theme in the `Browse` tab
   - copy templates into personal custom categories
+  - saved categories support sorting by `Recently played` or `Order of saving`
 - **Custom categories (selection-only)**: Choose Category → `More Categories`
   - controls the **enabled custom categories** list (what appears on Choose Category)
   - `Add categories to selection` commits enabled categories
   - `Back` returns without applying draft changes
   - no create/edit/delete in this flow
   - includes `Create & browse categories` to temporarily open full management, then return
+  - list sorting matches the same `Recently played` / `Order of saving` control
 
 ## Rules
 - 2–12 players
@@ -68,4 +71,6 @@ npm run dev -- --host
 - Enabled custom category IDs
 - Last selected custom category IDs (for round selection)
 - Custom categories in local storage
+- Custom category metadata (`createdAt`, `lastPlayedAt`)
+- Custom category sort mode (`customCategoriesSortMode`)
 - All-impostor cooldown counter in local storage

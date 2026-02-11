@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { CATEGORIES } from "./wordBank";
 import {
   PREDEFINED_CUSTOM_WORD_BANK,
@@ -6,16 +6,22 @@ import {
 } from "./predefinedCustomWordBank";
 import CustomWordBanksScreen from "./screens/CustomWordBanks";
 import {
+  CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
+  CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED,
+  DEFAULT_CUSTOM_WORD_BANK_SORT_MODE,
   loadCustomWordBanks,
   saveCustomWordBanks,
   getNextCustomWordBankName,
   createCustomWordBank,
   updateCustomWordBank,
   deleteCustomWordBank,
+  normalizeCustomWordBankSortMode,
+  sortCustomWordBanks,
 } from "./customWordBanks";
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
+const CUSTOM_CATEGORIES_SORT_MODE_KEY = "customCategoriesSortMode";
 const ALL_IMPOSTOR_COOLDOWN_KEY = "allImpostorCooldown";
 const ALL_IMPOSTOR_COOLDOWN_MAX = 9;
 const PLAYER_PRESETS_KEY = "playerPresets";
@@ -1234,7 +1240,9 @@ function CategoriesScreen({
 function SelectCustomWordBanksScreen({
   banks,
   draftEnabledBankIds,
+  sortMode,
   onDraftEnabledBankIdsChange,
+  onSortModeChange,
   onApply,
   onOpenCustomWordBanks,
   onBack,
@@ -1280,6 +1288,45 @@ function SelectCustomWordBanksScreen({
         marginBottom: 14,
         flex: 1,
       }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 10,
+        }}>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: PALETTE.muted,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+          }}>
+            Sort by
+          </span>
+          <select
+            value={sortMode}
+            onChange={(e) => onSortModeChange(e.target.value)}
+            style={{
+              borderRadius: 999,
+              border: `2px solid ${PALETTE.border}`,
+              background: "#FFF",
+              color: PALETTE.text,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "6px 10px",
+              minWidth: 148,
+            }}
+          >
+            <option value={CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED}>
+              Recently played
+            </option>
+            <option value={CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING}>
+              Order of saving
+            </option>
+          </select>
+        </div>
+
         {banks.length === 0 ? (
           <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
             No custom categories available. Create your own or browse predefined categories using the button above or from the Home screen.
@@ -1746,6 +1793,11 @@ export default function App() {
   const [enabledCustomBankIds, setEnabledCustomBankIds] = useState(initialEnabledCustomBankIds);
   const [selectedCustomBankIds, setSelectedCustomBankIds] = useState(initialSelectedCustomBankIds);
   const [selectCustomWordBanksDraftIds, setSelectCustomWordBanksDraftIds] = useState([]);
+  const [customWordBanksSortMode, setCustomWordBanksSortMode] = useState(() =>
+    normalizeCustomWordBankSortMode(
+      stored[CUSTOM_CATEGORIES_SORT_MODE_KEY] || DEFAULT_CUSTOM_WORD_BANK_SORT_MODE,
+    ),
+  );
   // runtime
   const [word, setWord] = useState("");
   const [impostorIds, setImpostorIds] = useState([]);
@@ -1783,6 +1835,17 @@ export default function App() {
     );
   }, [enabledCustomBankIds]);
 
+  const sortedCustomWordBanks = useMemo(
+    () => sortCustomWordBanks(customWordBanks, customWordBanksSortMode),
+    [customWordBanks, customWordBanksSortMode],
+  );
+
+  const handleCustomWordBanksSortModeChange = useCallback((nextMode) => {
+    const normalizedMode = normalizeCustomWordBankSortMode(nextMode);
+    setCustomWordBanksSortMode(normalizedMode);
+    save({ [CUSTOM_CATEGORIES_SORT_MODE_KEY]: normalizedMode });
+  }, []);
+
   const handleCreateCustomBank = useCallback(({ name, wordsInput }) => {
     setCustomWordBanks((prev) => {
       const next = createCustomWordBank(prev, { name, wordsInput });
@@ -1818,6 +1881,20 @@ export default function App() {
     setSelectCustomWordBanksDraftIds((prev) => prev.filter((bankId) => bankId !== id));
   }, []);
 
+  const handleClearAllCustomBanks = useCallback(() => {
+    setCustomWordBanks(() => {
+      saveCustomWordBanks([]);
+      return [];
+    });
+    setEnabledCustomBankIds([]);
+    setSelectedCustomBankIds([]);
+    setSelectCustomWordBanksDraftIds([]);
+    save({
+      enabledCustomBankIds: [],
+      lastSelectedCustomBankIds: [],
+    });
+  }, []);
+
   const handleSavePredefinedBank = useCallback((bank) => {
     setCustomWordBanks((prev) => {
       const next = createCustomWordBank(prev, {
@@ -1851,6 +1928,21 @@ export default function App() {
       : Math.max(0, allImpostorCooldown - 1);
     saveAllImpostorCooldown(nextAllImpostorCooldown);
     const starter = pick(ids);
+
+    if (selectedCustomBanks.length > 0) {
+      const selectedCustomBankIdSet = new Set(selectedCustomBanks.map((bank) => bank.id));
+      const playedAt = Date.now();
+      setCustomWordBanks((prev) => {
+        const next = prev.map((bank) => (
+          selectedCustomBankIdSet.has(bank.id)
+            ? { ...bank, lastPlayedAt: playedAt }
+            : bank
+        ));
+        saveCustomWordBanks(next);
+        return next;
+      });
+    }
+
     setSelectedCats([
       ...selectedBuiltInCategories,
       ...selectedCustomBanks.map((bank) => bank.name),
@@ -1921,9 +2013,11 @@ export default function App() {
     <>
       <GlobalStyle />
       <SelectCustomWordBanksScreen
-        banks={customWordBanks}
+        banks={sortedCustomWordBanks}
         draftEnabledBankIds={selectCustomWordBanksDraftIds}
+        sortMode={customWordBanksSortMode}
         onDraftEnabledBankIdsChange={setSelectCustomWordBanksDraftIds}
+        onSortModeChange={handleCustomWordBanksSortModeChange}
         onApply={(nextEnabledBankIds) => {
           const knownIds = new Set(customWordBanks.map((bank) => bank.id));
           const sanitizedEnabledBankIds = Array.from(new Set(
@@ -1956,18 +2050,21 @@ export default function App() {
     <>
       <GlobalStyle />
       <CustomWordBanksScreen
-        banks={customWordBanks}
+        banks={sortedCustomWordBanks}
         selectedBankIds={customWordBanksOrigin === "categories" ? selectedCustomBankIds : []}
         selectable={customWordBanksOrigin === "categories"}
         predefinedWordBank={PREDEFINED_CUSTOM_WORD_BANK}
         predefinedWordBankThemes={PREDEFINED_CUSTOM_WORD_BANK_THEMES}
         nextDefaultName={getNextCustomWordBankName(customWordBanks)}
+        sortMode={customWordBanksSortMode}
+        onSortModeChange={handleCustomWordBanksSortModeChange}
         backButtonLabel={customWordBanksOrigin === "categories" ? "Add categories to selection" : "Back"}
         onBack={goBack}
         onToggleSelection={toggleCustomBankSelection}
         onCreateBank={handleCreateCustomBank}
         onUpdateBank={handleUpdateCustomBank}
         onDeleteBank={handleDeleteCustomBank}
+        onClearAllBanks={handleClearAllCustomBanks}
         onSavePredefinedBank={handleSavePredefinedBank}
       />
     </>

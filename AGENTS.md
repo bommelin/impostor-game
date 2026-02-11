@@ -76,6 +76,10 @@ Custom Categories screen behavior:
 - Back behavior is origin-based: from Home it returns to Home, and from the selection-only flow it returns to "Select more categories".
 - The selection-only screen controls which custom categories are enabled (visible) on Choose Categories.
 - Enabled custom categories remain visible on Choose Categories even when unselected; they only disappear when disabled in selection-only.
+- Both "My Custom Categories" (Saved tab) and "Select more categories" include a Sort control:
+  - Recently played (uses `lastPlayedAt`, descending; never-played at bottom)
+  - Order of saving (uses `createdAt`, ascending)
+- "My Custom Categories" (Saved tab) includes a destructive `Clear all` action that uses an in-app confirmation modal and deletes all saved custom categories.
 
 ## Persistence
 Persist locally:

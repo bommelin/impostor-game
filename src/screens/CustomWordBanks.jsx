@@ -1,4 +1,9 @@
 import { useMemo, useState } from "react";
+import {
+  CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
+  CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED,
+  parseWordsInput,
+} from "../customWordBanks";
 
 const PALETTE = {
   bg: "#FFF9F0",
@@ -17,6 +22,13 @@ function darken(hex) {
   const b = Math.max(0, (n & 0xff) - 40);
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
+
+const getBankSignature = (bank) => {
+  const normalizedName = String(bank?.name ?? "").trim().toLocaleLowerCase();
+  const normalizedWords = parseWordsInput(bank?.words ?? [])
+    .map((word) => String(word).trim().toLocaleLowerCase());
+  return `${normalizedName}::${normalizedWords.join("\u0001")}`;
+};
 
 function ModalPillButton({ children, onClick, color = PALETTE.primary, disabled }) {
   const [pressed, setPressed] = useState(false);
@@ -62,13 +74,17 @@ export default function CustomWordBanksScreen({
   onCreateBank,
   onUpdateBank,
   onDeleteBank,
+  onClearAllBanks,
   onSavePredefinedBank,
+  sortMode = CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
+  onSortModeChange,
 }) {
   const [editorMode, setEditorMode] = useState(null); // "create" | "edit" | null
   const [editingId, setEditingId] = useState(null);
   const [draftName, setDraftName] = useState("");
   const [draftWords, setDraftWords] = useState("");
   const [pendingDeleteBank, setPendingDeleteBank] = useState(null);
+  const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("my");
   const [mySearchQuery, setMySearchQuery] = useState("");
   const [browseSearchQuery, setBrowseSearchQuery] = useState("");
@@ -121,6 +137,7 @@ export default function CustomWordBanksScreen({
   const filteredMyBanks = banks.filter((bank) =>
     String(bank.name ?? "").toLocaleLowerCase().includes(normalizedMySearchQuery),
   );
+  const hasSavedCategories = banks.length > 0;
 
   const openCreate = () => {
     setActiveTab("my");
@@ -165,6 +182,13 @@ export default function CustomWordBanksScreen({
     setPendingDeleteBank(null);
   };
 
+  const confirmClearAll = () => {
+    onClearAllBanks?.();
+    closeEditor();
+    setPendingDeleteBank(null);
+    setIsClearAllConfirmOpen(false);
+  };
+
   const switchTab = (tab) => {
     setActiveTab(tab);
     if (tab === "browse") closeEditor();
@@ -181,11 +205,12 @@ export default function CustomWordBanksScreen({
     });
   };
 
-  const isPredefinedBankSaved = (bank) => banks.some((customBank) =>
-    customBank.name === bank.name
-    && customBank.words.length === bank.words.length
-    && customBank.words.every((word, index) => word === bank.words[index]),
+  const savedBankSignatures = useMemo(
+    () => new Set(banks.map((bank) => getBankSignature(bank))),
+    [banks],
   );
+
+  const isPredefinedBankSaved = (bank) => savedBankSignatures.has(getBankSignature(bank));
 
   return (
     <div style={{
@@ -386,6 +411,71 @@ export default function CustomWordBanksScreen({
             padding: 12,
             marginBottom: 14,
           }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              marginBottom: 10,
+            }}>
+              <span style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: PALETTE.muted,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}>
+                Sort by
+              </span>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 8,
+                flex: "0 1 68%",
+                minWidth: 0,
+              }}>
+                <select
+                  value={sortMode}
+                  onChange={(e) => onSortModeChange?.(e.target.value)}
+                  style={{
+                    borderRadius: 999,
+                    border: `2px solid ${PALETTE.border}`,
+                    background: "#FFF",
+                    color: PALETTE.text,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    padding: "6px 10px",
+                    minWidth: 148,
+                    flex: 1,
+                  }}
+                >
+                  <option value={CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED}>
+                    Recently played
+                  </option>
+                  <option value={CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING}>
+                    Order of saving
+                  </option>
+                </select>
+                <button
+                  disabled={!hasSavedCategories}
+                  onClick={() => setIsClearAllConfirmOpen(true)}
+                  style={{
+                    borderRadius: 999,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontFamily: "'Fredoka One', cursive",
+                    background: hasSavedCategories ? PALETTE.primary : "#E7E7E7",
+                    color: hasSavedCategories ? "#FFF" : "#AAA",
+                    boxShadow: hasSavedCategories ? `0 3px 0 ${darken(PALETTE.primary)}` : "none",
+                    cursor: hasSavedCategories ? "pointer" : "not-allowed",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Delete all
+                </button>
+              </div>
+            </div>
             {filteredMyBanks.length === 0 ? (
               <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
                 {normalizedMySearchQuery ? "No results" : "No custom categories available"}
@@ -660,6 +750,58 @@ export default function CustomWordBanksScreen({
                 Cancel
               </ModalPillButton>
               <ModalPillButton color={PALETTE.primary} onClick={confirmDelete}>
+                Delete
+              </ModalPillButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isClearAllConfirmOpen && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(45,45,45,0.35)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+          zIndex: 10,
+        }}>
+          <div style={{
+            width: "100%",
+            maxWidth: 320,
+            background: "#FFF",
+            borderRadius: 16,
+            border: "2px solid #F0E8DC",
+            padding: "16px 14px",
+            boxShadow: "0 14px 32px rgba(0,0,0,0.16)",
+          }}>
+            <p style={{
+              textAlign: "center",
+              fontFamily: "'Fredoka One', cursive",
+              color: PALETTE.text,
+              fontSize: 24,
+              marginBottom: 10,
+              lineHeight: 1.2,
+            }}>
+              Delete all categories?
+            </p>
+            <p style={{
+              textAlign: "center",
+              color: PALETTE.muted,
+              fontWeight: 700,
+              fontSize: 14,
+              lineHeight: 1.35,
+              marginBottom: 14,
+            }}>
+              This will permanently delete all your custom categories.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+              <ModalPillButton color={PALETTE.muted} onClick={() => setIsClearAllConfirmOpen(false)}>
+                Cancel
+              </ModalPillButton>
+              <ModalPillButton color={PALETTE.primary} onClick={confirmClearAll}>
                 Delete
               </ModalPillButton>
             </div>

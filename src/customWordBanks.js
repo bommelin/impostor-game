@@ -1,4 +1,7 @@
 const CUSTOM_WORD_BANKS_KEY = "impostor_custom_word_banks_v1";
+export const CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED = "recently_played";
+export const CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING = "order_of_saving";
+export const DEFAULT_CUSTOM_WORD_BANK_SORT_MODE = CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING;
 
 const safeParse = (raw) => {
   try {
@@ -11,6 +14,11 @@ const safeParse = (raw) => {
 const generateBankId = () => {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `custom_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
+const normalizeTimestamp = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 export const parseWordsInput = (input) => {
@@ -35,8 +43,12 @@ const normalizeBank = (bank) => {
   const id = typeof bank.id === "string" ? bank.id : String(bank.id ?? "");
   if (!id) return null;
   const name = typeof bank.name === "string" && bank.name.trim() ? bank.name.trim() : "Custom";
-  const createdAt = Number.isFinite(bank.createdAt) ? bank.createdAt : Date.now();
-  const updatedAt = Number.isFinite(bank.updatedAt) ? bank.updatedAt : createdAt;
+  const createdAt = normalizeTimestamp(bank.createdAt)
+    ?? normalizeTimestamp(bank.savedAt)
+    ?? normalizeTimestamp(bank.updatedAt)
+    ?? 0;
+  const updatedAt = normalizeTimestamp(bank.updatedAt) ?? createdAt;
+  const lastPlayedAt = normalizeTimestamp(bank.lastPlayedAt);
 
   return {
     id,
@@ -44,6 +56,7 @@ const normalizeBank = (bank) => {
     words: parseWordsInput(Array.isArray(bank.words) ? bank.words : []),
     createdAt,
     updatedAt,
+    ...(lastPlayedAt !== null ? { lastPlayedAt } : {}),
   };
 };
 
@@ -101,3 +114,45 @@ export const updateCustomWordBank = (banks, id, { name, wordsInput }) => {
 };
 
 export const deleteCustomWordBank = (banks, id) => banks.filter((bank) => bank.id !== id);
+
+export const normalizeCustomWordBankSortMode = (mode) => (
+  mode === CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED
+    ? CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED
+    : CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING
+);
+
+const getCreatedAt = (bank) => (Number.isFinite(bank?.createdAt) ? bank.createdAt : 0);
+const getLastPlayedAt = (bank) => {
+  if (!Number.isFinite(bank?.lastPlayedAt)) return null;
+  return bank.lastPlayedAt > 0 ? bank.lastPlayedAt : null;
+};
+
+export const sortCustomWordBanks = (banks, mode) => {
+  const normalizedMode = normalizeCustomWordBankSortMode(mode);
+  const list = (Array.isArray(banks) ? banks : []).map((bank, index) => ({ bank, index }));
+  const compareByCreatedAtAsc = (a, b) => {
+    const createdAtDiff = getCreatedAt(a.bank) - getCreatedAt(b.bank);
+    if (createdAtDiff !== 0) return createdAtDiff;
+    return a.index - b.index;
+  };
+
+  if (normalizedMode === CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING) {
+    return list.sort(compareByCreatedAtAsc).map(({ bank }) => bank);
+  }
+
+  return list.sort((a, b) => {
+    const aLastPlayedAt = getLastPlayedAt(a.bank);
+    const bLastPlayedAt = getLastPlayedAt(b.bank);
+    const aHasLastPlayedAt = aLastPlayedAt !== null;
+    const bHasLastPlayedAt = bLastPlayedAt !== null;
+
+    if (aHasLastPlayedAt && bHasLastPlayedAt) {
+      const lastPlayedAtDiff = bLastPlayedAt - aLastPlayedAt;
+      if (lastPlayedAtDiff !== 0) return lastPlayedAtDiff;
+    } else if (aHasLastPlayedAt !== bHasLastPlayedAt) {
+      return aHasLastPlayedAt ? -1 : 1;
+    }
+
+    return compareByCreatedAtAsc(a, b);
+  }).map(({ bank }) => bank);
+};
