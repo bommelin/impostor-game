@@ -25,7 +25,11 @@ const CUSTOM_CATEGORIES_SORT_MODE_KEY = "customCategoriesSortMode";
 const ALL_IMPOSTOR_COOLDOWN_KEY = "allImpostorCooldown";
 const ALL_IMPOSTOR_COOLDOWN_MAX = 9;
 const PLAYER_PRESETS_KEY = "playerPresets";
+const PLAYER_PRESETS_SORT_MODE_KEY = "playerPresetsSortMode";
 const PLAYER_PRESETS_LIMIT = 10;
+const PLAYER_PRESETS_SORT_MODE_RECENTLY_PLAYED = "recently_played";
+const PLAYER_PRESETS_SORT_MODE_RECENTLY_STORED = "recently_stored";
+const DEFAULT_PLAYER_PRESETS_SORT_MODE = PLAYER_PRESETS_SORT_MODE_RECENTLY_STORED;
 const MIN_PLAYER_COUNT = 2;
 const MAX_PLAYER_COUNT = 12;
 const load = () => {
@@ -66,20 +70,65 @@ const sanitizePlayerNames = (names, playerCount) =>
   Array.from({ length: clampPlayerCount(playerCount) }, (_, i) =>
     typeof names?.[i] === "string" ? names[i] : "",
   );
-const sortPlayerPresets = (presets) =>
-  [...presets].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+const normalizePlayerPresetsSortMode = (mode) => (
+  mode === PLAYER_PRESETS_SORT_MODE_RECENTLY_PLAYED || mode === PLAYER_PRESETS_SORT_MODE_RECENTLY_STORED
+    ? mode
+    : DEFAULT_PLAYER_PRESETS_SORT_MODE
+);
+const getPresetStoredAt = (preset) => {
+  const updatedAt = Number(preset?.updatedAt);
+  if (Number.isFinite(updatedAt)) return updatedAt;
+  const createdAt = Number(preset?.createdAt);
+  if (Number.isFinite(createdAt)) return createdAt;
+  return 0;
+};
+const getPresetLastUsedAt = (preset) => {
+  const lastUsedAt = Number(preset?.lastUsedAt);
+  return Number.isFinite(lastUsedAt) ? lastUsedAt : null;
+};
+const sortPlayerPresets = (presets, mode = DEFAULT_PLAYER_PRESETS_SORT_MODE) => {
+  const normalizedMode = normalizePlayerPresetsSortMode(mode);
+  const list = [...presets];
+
+  if (normalizedMode === PLAYER_PRESETS_SORT_MODE_RECENTLY_PLAYED) {
+    return list.sort((a, b) => {
+      const aLastUsedAt = getPresetLastUsedAt(a);
+      const bLastUsedAt = getPresetLastUsedAt(b);
+      if (aLastUsedAt === null && bLastUsedAt === null) {
+        return getPresetStoredAt(b) - getPresetStoredAt(a);
+      }
+      if (aLastUsedAt === null) return 1;
+      if (bLastUsedAt === null) return -1;
+      if (bLastUsedAt !== aLastUsedAt) return bLastUsedAt - aLastUsedAt;
+      return getPresetStoredAt(b) - getPresetStoredAt(a);
+    });
+  }
+
+  return list.sort((a, b) => getPresetStoredAt(b) - getPresetStoredAt(a));
+};
 const parsePlayerPreset = (candidate) => {
   if (!candidate || typeof candidate !== "object") return null;
   if (typeof candidate.id !== "string" || candidate.id.trim() === "") return null;
   const playerCount = clampPlayerCount(candidate.playerCount);
   const players = sanitizePlayerNames(candidate.players, playerCount);
+  const createdAt = Number.isFinite(Number(candidate.createdAt))
+    ? Number(candidate.createdAt)
+    : Date.now();
+  const updatedAt = Number.isFinite(Number(candidate.updatedAt))
+    ? Number(candidate.updatedAt)
+    : createdAt;
+  const lastUsedAt = Number.isFinite(Number(candidate.lastUsedAt))
+    ? Number(candidate.lastUsedAt)
+    : null;
   return {
     id: candidate.id,
     name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : "Preset",
     players,
     playerCount,
     impostorCount: clampImpostorCount(candidate.impostorCount, playerCount),
-    updatedAt: Number.isFinite(Number(candidate.updatedAt)) ? Number(candidate.updatedAt) : Date.now(),
+    createdAt,
+    updatedAt,
+    lastUsedAt,
   };
 };
 const loadPlayerPresets = () => {
@@ -87,14 +136,15 @@ const loadPlayerPresets = () => {
     const raw = JSON.parse(localStorage.getItem(PLAYER_PRESETS_KEY) || "[]");
     if (!Array.isArray(raw)) return [];
     const parsed = raw.map(parsePlayerPreset).filter(Boolean).slice(0, PLAYER_PRESETS_LIMIT);
-    return sortPlayerPresets(parsed);
+    return sortPlayerPresets(parsed, DEFAULT_PLAYER_PRESETS_SORT_MODE);
   } catch {
     return [];
   }
 };
 const savePlayerPresets = (presets) => {
   try {
-    const sorted = sortPlayerPresets(presets).slice(0, PLAYER_PRESETS_LIMIT);
+    const sorted = sortPlayerPresets(presets, DEFAULT_PLAYER_PRESETS_SORT_MODE)
+      .slice(0, PLAYER_PRESETS_LIMIT);
     localStorage.setItem(PLAYER_PRESETS_KEY, JSON.stringify(sorted));
   } catch {}
 };
@@ -109,6 +159,14 @@ const buildPresetName = (playerNames, playerCount) => {
     .map((name, i) => name.trim() || `Player ${i + 1}`);
   const baseName = safeNames.length >= 2 ? `${safeNames[0]} + ${safeNames[1]}` : safeNames[0] || "Preset";
   return playerCount > 2 ? `${baseName} (${playerCount} players)` : baseName;
+};
+const createPlayersSetupDraft = ({ names, playerCount, impostorCount }) => {
+  const nextPlayerCount = clampPlayerCount(playerCount ?? names?.length ?? 4);
+  return {
+    n: nextPlayerCount,
+    k: clampImpostorCount(impostorCount, nextPlayerCount),
+    names: sanitizePlayerNames(names, nextPlayerCount),
+  };
 };
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
@@ -606,7 +664,7 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
           Play Again
         </BigButton>
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
-          My Categories
+          More Categories
         </BigButton>
       </div>
       {/* decorative blobs */}
@@ -634,138 +692,40 @@ function HomeScreen({ onStart, onPlayAgain, onOpenCustomWordBanks, hasPlayers })
   );
 }
 
-function PlayersScreen({ initial, onContinue, onBack }) {
-  const stored = load();
-  const [n, setN] = useState(initial?.n || stored.lastPlayerCount || 4);
-  const [k, setK] = useState(initial?.k || stored.lastImpostorCount || 1);
-  const [names, setNames] = useState(() => {
-    const saved = stored.savedPlayers || [];
-    const count = initial?.n || stored.lastPlayerCount || 4;
-    return Array.from({ length: count }, (_, i) => saved[i] || "");
-  });
-  const [presets, setPresets] = useState(() => loadPlayerPresets());
-  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
-  const [infoModal, setInfoModal] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null);
-  const [editingPreset, setEditingPreset] = useState(null);
+function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack }) {
+  const n = clampPlayerCount(draft?.n);
+  const names = sanitizePlayerNames(draft?.names, n);
+  const k = clampImpostorCount(draft?.k, n);
 
-  const persistPresets = useCallback((nextPresets) => {
-    const normalized = nextPresets
-      .map(parsePlayerPreset)
-      .filter(Boolean)
-      .slice(0, PLAYER_PRESETS_LIMIT);
-    const sorted = sortPlayerPresets(normalized);
-    setPresets(sorted);
-    savePlayerPresets(sorted);
-    return sorted;
-  }, []);
-
-  useEffect(() => {
-    setNames(prev => {
-      const next = Array.from({ length: n }, (_, i) => prev[i] ?? "");
-      return next;
+  const setDraft = (updater) => {
+    onDraftChange((prevRaw) => {
+      const prev = createPlayersSetupDraft(prevRaw || { playerCount: n, impostorCount: k, names });
+      const candidate = typeof updater === "function" ? updater(prev) : updater;
+      return createPlayersSetupDraft({
+        playerCount: candidate?.n ?? prev.n,
+        impostorCount: candidate?.k ?? prev.k,
+        names: candidate?.names ?? prev.names,
+      });
     });
-    if (k > n - 1) setK(Math.max(1, n - 1));
-  }, [n]);
+  };
 
-  const finalNames = names.map((nm, i) => nm.trim() || `Player ${i + 1}`);
-  const confirmPreset = confirmModal
-    ? presets.find((preset) => preset.id === confirmModal.presetId) || null
-    : null;
+  const setN = (nextN) => {
+    setDraft((prev) => ({ ...prev, n: typeof nextN === "function" ? nextN(prev.n) : nextN }));
+  };
+
+  const setK = (nextK) => {
+    setDraft((prev) => ({ ...prev, k: typeof nextK === "function" ? nextK(prev.k) : nextK }));
+  };
+
+  const setNames = (nextNames) => {
+    setDraft((prev) => ({ ...prev, names: typeof nextNames === "function" ? nextNames(prev.names) : nextNames }));
+  };
+
+  const finalNames = names.map((name, i) => name.trim() || `Player ${i + 1}`);
 
   const handleContinue = () => {
     save({ savedPlayers: finalNames, lastPlayerCount: n, lastImpostorCount: k });
     onContinue({ players: finalNames, k });
-  };
-  const handleSaveCurrentAsPreset = () => {
-    if (presets.length >= PLAYER_PRESETS_LIMIT) {
-      setInfoModal({
-        title: "Preset limit reached",
-        body: "You can save up to 10 presets. Delete one to add a new preset.",
-      });
-      return;
-    }
-    const playerCount = clampPlayerCount(n);
-    const currentPlayers = sanitizePlayerNames(names, playerCount);
-    const nextPreset = {
-      id: uniqueString(),
-      name: buildPresetName(currentPlayers, playerCount),
-      players: currentPlayers,
-      playerCount,
-      impostorCount: clampImpostorCount(k, playerCount),
-      updatedAt: Date.now(),
-    };
-    persistPresets([nextPreset, ...presets]);
-  };
-  const handleConfirmLoadPreset = () => {
-    if (!confirmPreset) {
-      setConfirmModal(null);
-      return;
-    }
-    const playerCount = clampPlayerCount(confirmPreset.playerCount);
-    const impostorCount = clampImpostorCount(confirmPreset.impostorCount, playerCount);
-    setN(playerCount);
-    setK(impostorCount);
-    setNames(sanitizePlayerNames(confirmPreset.players, playerCount));
-    setConfirmModal(null);
-    setIsPresetsModalOpen(false);
-  };
-  const handleConfirmDeletePreset = () => {
-    if (!confirmPreset) {
-      setConfirmModal(null);
-      return;
-    }
-    persistPresets(presets.filter((preset) => preset.id !== confirmPreset.id));
-    setConfirmModal(null);
-  };
-  const openEditPreset = (preset) => {
-    const playerCount = clampPlayerCount(preset.playerCount);
-    setEditingPreset({
-      id: preset.id,
-      name: preset.name,
-      playerCount,
-      impostorCount: clampImpostorCount(preset.impostorCount, playerCount),
-      players: sanitizePlayerNames(preset.players, playerCount),
-    });
-  };
-  const handleEditPlayerCount = (delta) => {
-    setEditingPreset((prev) => {
-      if (!prev) return prev;
-      const nextPlayerCount = clampPlayerCount(prev.playerCount + delta);
-      const nextPlayers = sanitizePlayerNames(prev.players, nextPlayerCount);
-      return {
-        ...prev,
-        playerCount: nextPlayerCount,
-        players: nextPlayers,
-        impostorCount: clampImpostorCount(prev.impostorCount, nextPlayerCount),
-      };
-    });
-  };
-  const handleEditImpostorCount = (delta) => {
-    setEditingPreset((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        impostorCount: clampImpostorCount(prev.impostorCount + delta, prev.playerCount),
-      };
-    });
-  };
-  const handleSaveEditedPreset = () => {
-    if (!editingPreset) return;
-    const playerCount = clampPlayerCount(editingPreset.playerCount);
-    const playersList = sanitizePlayerNames(editingPreset.players, playerCount);
-    const updatedPreset = {
-      id: editingPreset.id,
-      name: editingPreset.name.trim() || buildPresetName(playersList, playerCount),
-      players: playersList,
-      playerCount,
-      impostorCount: clampImpostorCount(editingPreset.impostorCount, playerCount),
-      updatedAt: Date.now(),
-    };
-    persistPresets(
-      presets.map((preset) => (preset.id === updatedPreset.id ? updatedPreset : preset)),
-    );
-    setEditingPreset(null);
   };
 
   return (
@@ -776,21 +736,27 @@ function PlayersScreen({ initial, onContinue, onBack }) {
       <Counter
         label="Players"
         value={n}
-        onDec={() => setN(v => Math.max(MIN_PLAYER_COUNT, v - 1))}
-        onInc={() => setN(v => Math.min(MAX_PLAYER_COUNT, v + 1))}
+        onDec={() => setN((value) => Math.max(MIN_PLAYER_COUNT, value - 1))}
+        onInc={() => setN((value) => Math.min(MAX_PLAYER_COUNT, value + 1))}
         disableDec={n <= MIN_PLAYER_COUNT}
         disableInc={n >= MAX_PLAYER_COUNT}
       />
       <Counter
         label="Impostors"
         value={k}
-        onDec={() => setK(v => Math.max(1, v - 1))}
-        onInc={() => setK(v => v + 1)}
+        onDec={() => setK((value) => Math.max(1, value - 1))}
+        onInc={() => setK((value) => value + 1)}
         disableDec={k <= 1}
         disableInc={k >= n - 1}
       />
-      <div style={{ background: "#FFF", borderRadius: 16, padding: 16,
-        border: `2px solid ${PALETTE.border}`, marginTop: 4, marginBottom: 16 }}>
+      <div style={{
+        background: "#FFF",
+        borderRadius: 16,
+        padding: 16,
+        border: `2px solid ${PALETTE.border}`,
+        marginTop: 4,
+        marginBottom: 16,
+      }}>
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -798,11 +764,19 @@ function PlayersScreen({ initial, onContinue, onBack }) {
           gap: 8,
           marginBottom: 12,
         }}>
-          <p style={{ fontWeight: 800, fontSize: 14, color: PALETTE.muted,
-            textTransform: "uppercase", letterSpacing: 1, marginBottom: 0 }}>Name your players</p>
+          <p style={{
+            fontWeight: 800,
+            fontSize: 14,
+            color: PALETTE.muted,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+            marginBottom: 0,
+          }}>
+            Name your players
+          </p>
           <PillButton
             color={PALETTE.muted}
-            onClick={() => setIsPresetsModalOpen(true)}
+            onClick={onOpenPresets}
             style={{ padding: "6px 12px", fontSize: 12 }}
           >
             Presets
@@ -813,99 +787,325 @@ function PlayersScreen({ initial, onContinue, onBack }) {
             <input
               key={i}
               value={name}
-              onChange={e => setNames(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+              onChange={(e) => setNames((prev) => prev.map((value, index) => (
+                index === i ? e.target.value : value
+              )))}
               placeholder={`Player ${i + 1}`}
               style={{
-                padding: "10px 14px", borderRadius: 12, fontSize: 16, fontWeight: 600,
-                border: `2px solid ${PALETTE.border}`, outline: "none",
-                background: PALETTE.bg, color: PALETTE.text,
+                padding: "10px 14px",
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                border: `2px solid ${PALETTE.border}`,
+                outline: "none",
+                background: PALETTE.bg,
+                color: PALETTE.text,
               }}
             />
           ))}
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: "auto" }}>
-        <BigButton onClick={handleContinue} color={PALETTE.accent}>Continue</BigButton>
+        <BigButton onClick={handleContinue} color={PALETTE.primary}>Continue</BigButton>
         <OutlineButton onClick={onBack} color={PALETTE.muted} small>Back</OutlineButton>
       </div>
+    </Screen>
+  );
+}
 
-      {isPresetsModalOpen && !infoModal && !(confirmModal && confirmPreset) && !editingPreset && (
-        <AppModal maxWidth={380}>
-          <p style={{
-            textAlign: "center",
-            fontFamily: "'Fredoka One', cursive",
-            color: PALETTE.text,
-            fontSize: 28,
-            marginBottom: 12,
+function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
+  const [presets, setPresets] = useState(() => loadPlayerPresets());
+  const [sortMode, setSortMode] = useState(() =>
+    normalizePlayerPresetsSortMode(
+      load()[PLAYER_PRESETS_SORT_MODE_KEY] || DEFAULT_PLAYER_PRESETS_SORT_MODE,
+    ),
+  );
+  const [infoModal, setInfoModal] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [editingPreset, setEditingPreset] = useState(null);
+
+  const persistPresets = useCallback((nextPresets) => {
+    const normalized = nextPresets
+      .map(parsePlayerPreset)
+      .filter(Boolean)
+      .slice(0, PLAYER_PRESETS_LIMIT);
+    const sortedForStorage = sortPlayerPresets(normalized, DEFAULT_PLAYER_PRESETS_SORT_MODE);
+    setPresets(sortedForStorage);
+    savePlayerPresets(sortedForStorage);
+    return sortedForStorage;
+  }, []);
+
+  const sortedPresets = useMemo(
+    () => sortPlayerPresets(presets, sortMode),
+    [presets, sortMode],
+  );
+
+  const confirmPreset = confirmModal?.presetId
+    ? presets.find((preset) => preset.id === confirmModal.presetId) || null
+    : null;
+  const hasPresets = presets.length > 0;
+  const playerCount = clampPlayerCount(draft?.n);
+  const playerNames = sanitizePlayerNames(draft?.names, playerCount);
+  const impostorCount = clampImpostorCount(draft?.k, playerCount);
+
+  const handleSortModeChange = (nextSortMode) => {
+    const normalizedMode = normalizePlayerPresetsSortMode(nextSortMode);
+    setSortMode(normalizedMode);
+    save({ [PLAYER_PRESETS_SORT_MODE_KEY]: normalizedMode });
+  };
+
+  const handleSaveCurrentAsPreset = () => {
+    if (presets.length >= PLAYER_PRESETS_LIMIT) {
+      setInfoModal({
+        title: "Preset limit reached",
+        body: "You can save up to 10 presets. Delete one to add a new preset.",
+      });
+      return;
+    }
+
+    const now = Date.now();
+    const nextPreset = {
+      id: uniqueString(),
+      name: buildPresetName(playerNames, playerCount),
+      players: playerNames,
+      playerCount,
+      impostorCount,
+      createdAt: now,
+      updatedAt: now,
+      lastUsedAt: null,
+    };
+    persistPresets([nextPreset, ...presets]);
+  };
+
+  const openEditPreset = (preset) => {
+    const nextPlayerCount = clampPlayerCount(preset.playerCount);
+    setEditingPreset({
+      id: preset.id,
+      name: preset.name,
+      playerCount: nextPlayerCount,
+      impostorCount: clampImpostorCount(preset.impostorCount, nextPlayerCount),
+      players: sanitizePlayerNames(preset.players, nextPlayerCount),
+    });
+  };
+
+  const handleEditPlayerCount = (delta) => {
+    setEditingPreset((prev) => {
+      if (!prev) return prev;
+      const nextPlayerCount = clampPlayerCount(prev.playerCount + delta);
+      return {
+        ...prev,
+        playerCount: nextPlayerCount,
+        players: sanitizePlayerNames(prev.players, nextPlayerCount),
+        impostorCount: clampImpostorCount(prev.impostorCount, nextPlayerCount),
+      };
+    });
+  };
+
+  const handleEditImpostorCount = (delta) => {
+    setEditingPreset((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        impostorCount: clampImpostorCount(prev.impostorCount + delta, prev.playerCount),
+      };
+    });
+  };
+
+  const handleSaveEditedPreset = () => {
+    if (!editingPreset) return;
+
+    const existingPreset = presets.find((preset) => preset.id === editingPreset.id);
+    const nextPlayerCount = clampPlayerCount(editingPreset.playerCount);
+    const nextPlayers = sanitizePlayerNames(editingPreset.players, nextPlayerCount);
+    const updatedPreset = {
+      id: editingPreset.id,
+      name: editingPreset.name.trim() || buildPresetName(nextPlayers, nextPlayerCount),
+      players: nextPlayers,
+      playerCount: nextPlayerCount,
+      impostorCount: clampImpostorCount(editingPreset.impostorCount, nextPlayerCount),
+      createdAt: existingPreset?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+      lastUsedAt: existingPreset?.lastUsedAt ?? null,
+    };
+
+    persistPresets(
+      presets.map((preset) => (preset.id === updatedPreset.id ? updatedPreset : preset)),
+    );
+    setEditingPreset(null);
+  };
+
+  const handleConfirmLoadPreset = () => {
+    if (!confirmPreset) {
+      setConfirmModal(null);
+      return;
+    }
+
+    const loadedAt = Date.now();
+    const nextPlayerCount = clampPlayerCount(confirmPreset.playerCount);
+    const nextImpostorCount = clampImpostorCount(confirmPreset.impostorCount, nextPlayerCount);
+    const nextNames = sanitizePlayerNames(confirmPreset.players, nextPlayerCount);
+    const updatedPreset = { ...confirmPreset, lastUsedAt: loadedAt };
+    persistPresets(
+      presets.map((preset) => (preset.id === updatedPreset.id ? updatedPreset : preset)),
+    );
+    onDraftChange(createPlayersSetupDraft({
+      playerCount: nextPlayerCount,
+      impostorCount: nextImpostorCount,
+      names: nextNames,
+    }));
+    setConfirmModal(null);
+    onBack();
+  };
+
+  const handleConfirmDeletePreset = () => {
+    if (!confirmPreset) {
+      setConfirmModal(null);
+      return;
+    }
+    persistPresets(presets.filter((preset) => preset.id !== confirmPreset.id));
+    setConfirmModal(null);
+  };
+
+  const handleConfirmClearAll = () => {
+    persistPresets([]);
+    setConfirmModal(null);
+  };
+
+  return (
+    <Screen>
+      <div style={{ paddingTop: 24, marginBottom: 20 }}>
+        <Title>Player Presets</Title>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+        <BigButton onClick={handleSaveCurrentAsPreset} color="#FF8E53">
+          Save current as preset
+        </BigButton>
+        <BackButton onClick={onBack} />
+      </div>
+
+      <div style={{
+        background: "#FFF",
+        borderRadius: 16,
+        border: `2px solid ${PALETTE.border}`,
+        padding: 12,
+        marginBottom: 14,
+        flex: 1,
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginBottom: 10,
+        }}>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: PALETTE.muted,
+            textTransform: "uppercase",
+            letterSpacing: 1,
           }}>
-            Player Presets
-          </p>
-          <div style={{ marginBottom: 12 }}>
-            <BigButton onClick={handleSaveCurrentAsPreset} color={PALETTE.primary}>
-              Save current as preset
-            </BigButton>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
-            {presets.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#AAA", fontWeight: 700, padding: "8px 0" }}>
-                No presets saved yet.
-              </p>
-            ) : (
-              presets.map((preset) => (
-                <div
-                  key={preset.id}
-                  style={{
-                    borderRadius: 12,
-                    border: `2px solid ${PALETTE.border}`,
-                    padding: "10px 10px 9px",
-                    background: "#FFF",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                  }}
-                >
-                  <div>
-                    <p style={{ fontSize: 16, fontWeight: 800, color: PALETTE.text, lineHeight: 1.2 }}>
-                      {preset.name}
-                    </p>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: PALETTE.muted, marginTop: 2 }}>
-                      {preset.playerCount} players • {preset.impostorCount} impostor{preset.impostorCount === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <PillButton
-                      color={PALETTE.accent}
-                      onClick={() => setConfirmModal({ type: "load", presetId: preset.id })}
-                      style={{ padding: "6px 12px", fontSize: 12 }}
-                    >
-                      Load
-                    </PillButton>
-                    <PillButton
-                      color={PALETTE.blue}
-                      onClick={() => openEditPreset(preset)}
-                      style={{ padding: "6px 12px", fontSize: 12 }}
-                    >
-                      Edit
-                    </PillButton>
-                    <PillButton
-                      color={PALETTE.primary}
-                      onClick={() => setConfirmModal({ type: "delete", presetId: preset.id })}
-                      style={{ padding: "6px 12px", fontSize: 12 }}
-                    >
-                      Delete
-                    </PillButton>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <PillButton color={PALETTE.muted} onClick={() => setIsPresetsModalOpen(false)}>
-              Close
+            Sort by
+          </span>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 8,
+            flex: "0 1 68%",
+            minWidth: 0,
+          }}>
+            <select
+              value={sortMode}
+              onChange={(e) => handleSortModeChange(e.target.value)}
+              style={{
+                borderRadius: 999,
+                border: `2px solid ${PALETTE.border}`,
+                background: "#FFF",
+                color: PALETTE.text,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "6px 10px",
+                minWidth: 148,
+                flex: 1,
+                textAlign: "center",
+                textAlignLast: "center",
+              }}
+            >
+              <option value={PLAYER_PRESETS_SORT_MODE_RECENTLY_PLAYED}>
+                Recently played
+              </option>
+              <option value={PLAYER_PRESETS_SORT_MODE_RECENTLY_STORED}>
+                Recently stored
+              </option>
+            </select>
+            <PillButton
+              disabled={!hasPresets}
+              color={PALETTE.primary}
+              onClick={() => setConfirmModal({ type: "clear_all" })}
+              style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+            >
+              Clear all
             </PillButton>
           </div>
-        </AppModal>
-      )}
+        </div>
+
+        {sortedPresets.length === 0 ? (
+          <p style={{ textAlign: "center", color: "#AAA", fontWeight: 700, padding: "8px 0" }}>
+            No presets saved yet.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {sortedPresets.map((preset) => (
+              <div
+                key={preset.id}
+                style={{
+                  borderRadius: 12,
+                  border: `2px solid ${PALETTE.border}`,
+                  padding: "10px 10px 9px",
+                  background: "#FFF",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: PALETTE.text, lineHeight: 1.2 }}>
+                    {preset.name}
+                  </p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: PALETTE.muted, marginTop: 2 }}>
+                    {preset.playerCount} players • {preset.impostorCount} impostor{preset.impostorCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <PillButton
+                    color={PALETTE.accent}
+                    onClick={() => setConfirmModal({ type: "load", presetId: preset.id })}
+                    style={{ padding: "6px 12px", fontSize: 12 }}
+                  >
+                    Load
+                  </PillButton>
+                  <PillButton
+                    color={PALETTE.blue}
+                    onClick={() => openEditPreset(preset)}
+                    style={{ padding: "6px 12px", fontSize: 12 }}
+                  >
+                    Edit
+                  </PillButton>
+                  <PillButton
+                    color={PALETTE.primary}
+                    onClick={() => setConfirmModal({ type: "delete", presetId: preset.id })}
+                    style={{ padding: "6px 12px", fontSize: 12 }}
+                  >
+                    Delete
+                  </PillButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {infoModal && (
         <AppModal>
@@ -996,6 +1196,39 @@ function PlayersScreen({ initial, onContinue, onBack }) {
             </PillButton>
             <PillButton color={PALETTE.primary} onClick={handleConfirmDeletePreset}>
               Delete
+            </PillButton>
+          </div>
+        </AppModal>
+      )}
+
+      {confirmModal?.type === "clear_all" && (
+        <AppModal>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.text,
+            fontSize: 24,
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}>
+            Clear all presets?
+          </p>
+          <p style={{
+            textAlign: "center",
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.35,
+            marginBottom: 14,
+          }}>
+            This will permanently delete all saved presets.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <PillButton color={PALETTE.muted} onClick={() => setConfirmModal(null)}>
+              Cancel
+            </PillButton>
+            <PillButton color={PALETTE.primary} onClick={handleConfirmClearAll}>
+              Clear
             </PillButton>
           </div>
         </AppModal>
@@ -1757,7 +1990,7 @@ function PostGameScreen({ onPlayAgain, onBackToHome, everyoneWasImpostor }) {
 }
 
 // ─── GAME STATE MACHINE ──────────────────────────────────────────────────────
-// screens: home | players | categories | custom_word_banks | select_custom_word_banks | reveal_loop | discussion | postgame
+// screens: home | players | player_presets | categories | custom_word_banks | select_custom_word_banks | reveal_loop | discussion | postgame
 
 export default function App() {
   const stored = load();
@@ -1784,6 +2017,11 @@ export default function App() {
   const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
   const [players, setPlayers] = useState(stored.savedPlayers || []);
   const [k, setK] = useState(stored.lastImpostorCount || 1);
+  const [playersSetupDraft, setPlayersSetupDraft] = useState(() => createPlayersSetupDraft({
+    playerCount: stored.savedPlayers?.length || stored.lastPlayerCount || 4,
+    impostorCount: stored.lastImpostorCount || 1,
+    names: stored.savedPlayers || [],
+  }));
   const [selectedCats, setSelectedCats] = useState(stored.lastSelectedCategories || []);
   const [customWordBanks, setCustomWordBanks] = useState(initialCustomWordBanks);
   const [selectedBuiltInCategories, setSelectedBuiltInCategories] = useState(() => {
@@ -1793,6 +2031,7 @@ export default function App() {
   const [enabledCustomBankIds, setEnabledCustomBankIds] = useState(initialEnabledCustomBankIds);
   const [selectedCustomBankIds, setSelectedCustomBankIds] = useState(initialSelectedCustomBankIds);
   const [selectCustomWordBanksDraftIds, setSelectCustomWordBanksDraftIds] = useState([]);
+  const [selectCustomWordBanksOrigin, setSelectCustomWordBanksOrigin] = useState("categories");
   const [customWordBanksSortMode, setCustomWordBanksSortMode] = useState(() =>
     normalizeCustomWordBankSortMode(
       stored[CUSTOM_CATEGORIES_SORT_MODE_KEY] || DEFAULT_CUSTOM_WORD_BANK_SORT_MODE,
@@ -1820,6 +2059,23 @@ export default function App() {
 
   const goBack = useCallback(() => {
     setScreenHistory((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  }, []);
+
+  const returnToScreen = useCallback((targetScreen) => {
+    setScreenHistory((prev) => {
+      const targetIndex = prev.lastIndexOf(targetScreen);
+      if (targetIndex >= 0) {
+        return prev.slice(0, targetIndex + 1);
+      }
+
+      if (targetScreen === "players" && prev.includes("home")) {
+        return ["home", "players"];
+      }
+
+      const current = prev[prev.length - 1];
+      if (current === targetScreen) return prev;
+      return [...prev, targetScreen];
+    });
   }, []);
 
   const toggleBuiltInCategory = useCallback((cat) => {
@@ -1965,7 +2221,16 @@ export default function App() {
       <GlobalStyle />
       <HomeScreen
         hasPlayers={hasPlayers}
-        onStart={() => navigateTo("players")}
+        onStart={() => {
+          const fallbackNames = players.length > 0 ? players : stored.savedPlayers || [];
+          const fallbackCount = players.length > 0 ? players.length : stored.lastPlayerCount || 4;
+          setPlayersSetupDraft(createPlayersSetupDraft({
+            playerCount: fallbackCount,
+            impostorCount: k,
+            names: fallbackNames,
+          }));
+          navigateTo("players");
+        }}
         onPlayAgain={() => navigateTo("categories")}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("home");
@@ -1979,11 +2244,39 @@ export default function App() {
     <>
       <GlobalStyle />
       <PlayersScreen
-        initial={{ n: players.length || 4, k }}
+        draft={playersSetupDraft}
+        onDraftChange={setPlayersSetupDraft}
+        onOpenPresets={() => navigateTo("player_presets")}
         onContinue={({ players: ps, k: ki }) => {
-          setPlayers(ps); setK(ki);
+          setPlayers(ps);
+          setK(ki);
+          setPlayersSetupDraft(createPlayersSetupDraft({
+            playerCount: ps.length,
+            impostorCount: ki,
+            names: ps,
+          }));
           navigateTo("categories");
         }}
+        onBack={() => {
+          const fallbackNames = players.length > 0 ? players : stored.savedPlayers || [];
+          const fallbackCount = players.length > 0 ? players.length : stored.lastPlayerCount || 4;
+          setPlayersSetupDraft(createPlayersSetupDraft({
+            playerCount: fallbackCount,
+            impostorCount: k,
+            names: fallbackNames,
+          }));
+          goBack();
+        }}
+      />
+    </>
+  );
+
+  if (screen === "player_presets") return (
+    <>
+      <GlobalStyle />
+      <PlayerPresetsScreen
+        draft={playersSetupDraft}
+        onDraftChange={setPlayersSetupDraft}
         onBack={goBack}
       />
     </>
@@ -2001,10 +2294,11 @@ export default function App() {
         onToggleCustomBankSelection={toggleCustomBankSelection}
         onOpenCustomWordBanks={() => {
           setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
+          setSelectCustomWordBanksOrigin("categories");
           navigateTo("select_custom_word_banks");
         }}
         onPlay={startRound}
-        onBack={goBack}
+        onBack={() => returnToScreen("players")}
       />
     </>
   );
@@ -2032,7 +2326,7 @@ export default function App() {
             enabledCustomBankIds: sanitizedEnabledBankIds,
             lastSelectedCustomBankIds: nextSelectedBankIds,
           });
-          navigateTo("categories");
+          returnToScreen(selectCustomWordBanksOrigin);
         }}
         onOpenCustomWordBanks={() => {
           setCustomWordBanksOrigin("select_custom_word_banks");
@@ -2040,7 +2334,7 @@ export default function App() {
         }}
         onBack={() => {
           setSelectCustomWordBanksDraftIds(enabledCustomBankIds);
-          goBack();
+          returnToScreen(selectCustomWordBanksOrigin);
         }}
       />
     </>

@@ -50,19 +50,22 @@ Implementation notes:
    - Exit
 2. Choose Players (single screen)
    - Player count +/-; name fields; impostor count +/- with constraint
-   - Player Presets button in the name section (save/load/edit/delete presets, max 10)
+   - Player Presets button in the name section opens a dedicated Player Presets screen
    - Continue → Choose Categories
-3. Choose Categories
+3. Player Presets
+   - Dedicated screen for save/load/edit/delete presets (max 10)
+   - Back returns to Choose Players
+4. Choose Categories
    - Select one or more categories
    - Custom categories are selected from a dedicated selection-only screen
    - Play
-4. Role Reveal Loop (pass-the-phone)
+5. Role Reveal Loop (pass-the-phone)
    - Gate screen: "Pass to {name}" + hold/slide to reveal
    - Reveal screen: show word for civilians, "Impostor" for impostors
    - Blackout 1–2s between players
-5. Starting Player screen
+6. Starting Player screen
    - Show starting player name
-6. Post Game
+7. Post Game
    - New Game (same players) → Choose Categories
    - Choose Categories (same as above)
    - Edit Players → Choose Players
@@ -70,12 +73,15 @@ Implementation notes:
 
 Custom Categories screen behavior:
 - Includes tabs: "My Custom Categories" and "Browse".
+- The full "More Categories" screen opens on the "Browse" tab by default.
 - "Browse" shows predefined templates (read-only) that can be copied into "My Custom Categories" with one tap.
 - This full management screen is accessed from Home. The Choose Categories flow uses a separate selection-only screen.
 - The selection-only "Select more categories" screen includes a full-width "Create & browse categories" button that opens the full management screen temporarily.
 - Back behavior is origin-based: from Home it returns to Home, and from the selection-only flow it returns to "Select more categories".
 - The selection-only screen controls which custom categories are enabled (visible) on Choose Categories.
 - Enabled custom categories remain visible on Choose Categories even when unselected; they only disappear when disabled in selection-only.
+- Choose Categories `Back` always returns to Choose Players.
+- Selection-only `Select more categories` returns to Choose Categories on `Back` and on apply.
 - Both "My Custom Categories" (Saved tab) and "Select more categories" include a Sort control:
   - Recently played (uses `lastPlayedAt`, descending; never-played at bottom)
   - Order of saving (uses `createdAt`, ascending)

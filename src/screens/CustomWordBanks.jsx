@@ -85,7 +85,7 @@ export default function CustomWordBanksScreen({
   const [draftWords, setDraftWords] = useState("");
   const [pendingDeleteBank, setPendingDeleteBank] = useState(null);
   const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("my");
+  const [activeTab, setActiveTab] = useState("browse");
   const [mySearchQuery, setMySearchQuery] = useState("");
   const [browseSearchQuery, setBrowseSearchQuery] = useState("");
   const [expandedThemeIds, setExpandedThemeIds] = useState([]);
@@ -234,7 +234,7 @@ export default function CustomWordBanksScreen({
       `}</style>
       <div style={{ textAlign: "center", marginBottom: 18 }}>
         <h1 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 34, color: PALETTE.primary }}>
-          My Categories
+          More Categories
         </h1>
       </div>
 
@@ -246,20 +246,6 @@ export default function CustomWordBanksScreen({
           marginBottom: 14,
         }}
       >
-        <button
-          onClick={() => switchTab("my")}
-          style={{
-            borderRadius: 12,
-            padding: "10px 12px",
-            fontSize: 14,
-            fontWeight: 800,
-            border: `2px solid ${activeTab === "my" ? PALETTE.primary : PALETTE.border}`,
-            background: activeTab === "my" ? "#FFF0F0" : "#FFF",
-            color: activeTab === "my" ? PALETTE.primary : PALETTE.muted,
-          }}
-        >
-          Saved
-        </button>
         <button
           onClick={() => switchTab("browse")}
           style={{
@@ -273,6 +259,20 @@ export default function CustomWordBanksScreen({
           }}
         >
           Browse
+        </button>
+        <button
+          onClick={() => switchTab("my")}
+          style={{
+            borderRadius: 12,
+            padding: "10px 12px",
+            fontSize: 14,
+            fontWeight: 800,
+            border: `2px solid ${activeTab === "my" ? PALETTE.primary : PALETTE.border}`,
+            background: activeTab === "my" ? "#FFF0F0" : "#FFF",
+            color: activeTab === "my" ? PALETTE.primary : PALETTE.muted,
+          }}
+        >
+          Saved
         </button>
       </div>
 
@@ -377,11 +377,11 @@ export default function CustomWordBanksScreen({
                     style={{
                       flex: 1,
                       borderRadius: 12,
-                      background: PALETTE.primary,
+                      background: "#6BCB77",
                       color: "#FFF",
                       padding: "10px 14px",
                       fontSize: 16,
-                      boxShadow: "0 4px 0 #CC4444",
+                      boxShadow: `0 4px 0 ${darken("#6BCB77")}`,
                     }}
                   >
                     Save

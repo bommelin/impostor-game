@@ -21,7 +21,8 @@ npm run dev -- --host
 1. **Home**: `New Game`, `Play Again`, `More Categories`
 2. **Choose players**:
    - set player count, impostor count, and names
-   - open `Presets` to save/load/edit/delete player presets
+   - open `Presets` to navigate to a dedicated **Player Presets** screen
+   - presets can be saved/loaded/edited/deleted, sorted by `Recently played` or `Recently stored`, and cleared with in-app confirmation
    - presets store player names, player count, and impostor count (max 10)
 3. **Choose Category**:
    - pick built-in categories
