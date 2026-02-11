@@ -332,33 +332,8 @@ function BigButton({ children, onClick, color = PALETTE.primary, style, disabled
         padding: small ? "12px 20px" : "16px 24px",
         borderRadius: 18,
         width: "100%",
-        boxShadow: disabled ? "none" : `0 5px 0 ${darken(color)}`,
+        boxShadow: disabled ? "none" : `0 5px 0 ${getButtonShadowColor(color)}`,
         letterSpacing: 0.5,
-        minHeight: 44,
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function OutlineButton({ children, onClick, color = PALETTE.primary, style, small, disabled }) {
-  return (
-    <button
-      type="button"
-      className="btn-pressable"
-      disabled={disabled}
-      onClick={onClick}
-      style={{
-        background: "transparent",
-        color: disabled ? "#AAA" : color,
-        fontSize: small ? 15 : 18,
-        padding: small ? "10px 16px" : "14px 20px",
-        borderRadius: 16,
-        width: "100%",
-        border: `2.5px solid ${disabled ? "#DDD" : color}`,
-        letterSpacing: 0.3,
         minHeight: 44,
         ...style,
       }}
@@ -370,9 +345,24 @@ function OutlineButton({ children, onClick, color = PALETTE.primary, style, smal
 
 function BackButton({ onClick, style }) {
   return (
-    <OutlineButton onClick={onClick} color={PALETTE.muted} small style={style}>
+    <button
+      type="button"
+      className="btn-pressable"
+      onClick={onClick}
+      style={{
+        width: "100%",
+        borderRadius: 14,
+        border: `2px solid ${PALETTE.border}`,
+        color: PALETTE.muted,
+        background: "#FFF",
+        padding: "11px 16px",
+        fontSize: 16,
+        minHeight: 44,
+        ...style,
+      }}
+    >
       Back
-    </OutlineButton>
+    </button>
   );
 }
 
@@ -392,7 +382,7 @@ function PillButton({ children, onClick, color = PALETTE.primary, disabled, styl
         background: disabled ? "#E7E7E7" : color,
         color: disabled ? "#AAA" : "#FFF",
         letterSpacing: 0.2,
-        boxShadow: disabled ? "none" : `0 3px 0 ${darken(color)}`,
+        boxShadow: disabled ? "none" : `0 3px 0 ${getButtonShadowColor(color)}`,
         minHeight: 34,
         ...style,
       }}
@@ -475,12 +465,33 @@ function Title({ children, sub, style }) {
 }
 
 function darken(hex) {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return "#333333";
   // simple darken by 20%
-  const n = parseInt(hex.replace("#",""), 16);
+  const n = parseInt(normalized.replace("#",""), 16);
   const r = Math.max(0, (n >> 16) - 40);
   const g = Math.max(0, ((n >> 8) & 0xFF) - 40);
   const b = Math.max(0, (n & 0xFF) - 40);
   return `#${[r,g,b].map(v => v.toString(16).padStart(2,"0")).join("")}`;
+}
+
+function normalizeHex(hex) {
+  if (typeof hex !== "string") return null;
+  const value = hex.trim();
+  if (!value.startsWith("#")) return null;
+  if (value.length === 4) {
+    const r = value[1];
+    const g = value[2];
+    const b = value[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  if (value.length === 7) return value;
+  return null;
+}
+
+function getButtonShadowColor(color) {
+  if (normalizeHex(color) === normalizeHex(PALETTE.muted)) return "#4A4A4A";
+  return darken(color);
 }
 
 function AppModal({ children, maxWidth = 360 }) {
@@ -817,89 +828,102 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
   };
 
   return (
-    <Screen>
+    <Screen style={{ overflowY: "hidden" }}>
       <div style={{ paddingTop: 24, marginBottom: 16 }}>
         <Title>Choose players</Title>
       </div>
-      <Counter
-        label="Players"
-        value={n}
-        onDec={() => setN((value) => Math.max(MIN_PLAYER_COUNT, value - 1))}
-        onInc={() => setN((value) => Math.min(MAX_PLAYER_COUNT, value + 1))}
-        disableDec={n <= MIN_PLAYER_COUNT}
-        disableInc={n >= MAX_PLAYER_COUNT}
-      />
-      <Counter
-        label="Impostors"
-        value={k}
-        onDec={() => setK((value) => Math.max(value - 1, 1))}
-        onInc={() => setK((value) => Math.min(value + 1, n - 1))}
-        disableDec={k <= 1}
-        disableInc={k >= n - 1}
-      />
-      <div style={{
-        background: "#FFF",
-        borderRadius: 16,
-        padding: 16,
-        border: `2px solid ${PALETTE.border}`,
-        marginTop: 4,
-        marginBottom: 16,
-      }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+        <Counter
+          label="Players"
+          value={n}
+          onDec={() => setN((value) => Math.max(MIN_PLAYER_COUNT, value - 1))}
+          onInc={() => setN((value) => Math.min(MAX_PLAYER_COUNT, value + 1))}
+          disableDec={n <= MIN_PLAYER_COUNT}
+          disableInc={n >= MAX_PLAYER_COUNT}
+        />
+        <Counter
+          label="Impostors"
+          value={k}
+          onDec={() => setK((value) => Math.max(value - 1, 1))}
+          onInc={() => setK((value) => Math.min(value + 1, n - 1))}
+          disableDec={k <= 1}
+          disableInc={k >= n - 1}
+        />
         <div style={{
+          background: "#FFF",
+          borderRadius: 16,
+          padding: 16,
+          border: `2px solid ${PALETTE.border}`,
+          marginTop: 4,
+          marginBottom: 16,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          marginBottom: 12,
+          flexDirection: "column",
+          flex: 1,
+          minHeight: 0,
         }}>
-          <p style={{
-            fontWeight: 800,
-            fontSize: 14,
-            color: PALETTE.muted,
-            textTransform: "uppercase",
-            letterSpacing: 1,
-            marginBottom: 0,
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 12,
           }}>
-            Name your players
-          </p>
-          <PillButton
-            color={PALETTE.muted}
-            onClick={onOpenPresets}
-            style={{
-              padding: "6px 12px",
-              fontSize: 12,
-              boxShadow: "0 3px 0 #4A4A4A",
-            }}
-          >
-            Saved presets
-          </PillButton>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {names.map((name, i) => (
-            <input
-              key={i}
-              value={name}
-              onChange={(e) => setNames((prev) => prev.map((value, index) => (
-                index === i ? e.target.value : value
-              )))}
-              placeholder={`Player ${i + 1}`}
+            <p style={{
+              fontWeight: 800,
+              fontSize: 14,
+              color: PALETTE.muted,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+              marginBottom: 0,
+            }}>
+              Name your players
+            </p>
+            <PillButton
+              color={PALETTE.muted}
+              onClick={onOpenPresets}
               style={{
-                padding: "10px 14px",
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 600,
-                border: `2px solid ${PALETTE.border}`,
-                outline: "none",
-                background: PALETTE.bg,
-                color: PALETTE.text,
+                padding: "6px 12px",
+                fontSize: 12,
+                boxShadow: "0 3px 0 #4A4A4A",
               }}
-            />
-          ))}
+            >
+              Saved presets
+            </PillButton>
+          </div>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            overflowY: "auto",
+            minHeight: 0,
+            overscrollBehavior: "contain",
+          }}>
+            {names.map((name, i) => (
+              <input
+                key={i}
+                value={name}
+                onChange={(e) => setNames((prev) => prev.map((value, index) => (
+                  index === i ? e.target.value : value
+                )))}
+                placeholder={`Player ${i + 1}`}
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  border: `2px solid ${PALETTE.border}`,
+                  outline: "none",
+                  background: PALETTE.bg,
+                  color: PALETTE.text,
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: "auto" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <BigButton onClick={handleContinue} color={PALETTE.primary}>Continue</BigButton>
-        <OutlineButton onClick={onBack} color={PALETTE.muted} small>Back</OutlineButton>
+        <BackButton onClick={onBack} />
       </div>
     </Screen>
   );
@@ -1127,7 +1151,7 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
               onClick={() => setConfirmModal({ type: "clear_all" })}
               style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
             >
-              Clear all
+              Delete all
             </PillButton>
           </div>
         </div>
@@ -1292,7 +1316,7 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
             marginBottom: 10,
             lineHeight: 1.2,
           }}>
-            Clear all presets?
+            Delete all presets?
           </p>
           <p style={{
             textAlign: "center",
@@ -1309,7 +1333,7 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
               Cancel
             </PillButton>
             <PillButton color={PALETTE.primary} onClick={handleConfirmClearAll}>
-              Clear
+              Delete all
             </PillButton>
           </div>
         </AppModal>
@@ -1552,7 +1576,7 @@ function CategoriesScreen({
         <BigButton onClick={onPlay} color={PALETTE.primary} disabled={totalWords === 0}>
           Let's Play!
         </BigButton>
-        <OutlineButton onClick={onBack} color={PALETTE.muted} small>Back</OutlineButton>
+        <BackButton onClick={onBack} />
       </div>
     </Screen>
   );
@@ -1569,8 +1593,16 @@ function SelectCustomWordBanksScreen({
   onOpenCustomWordBanks,
   onBack,
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const selectedCategories = Array.isArray(draftEnabledBankIds) ? draftEnabledBankIds : [];
   const baselineCategories = Array.isArray(baselineEnabledBankIds) ? baselineEnabledBankIds : [];
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredBanks = useMemo(
+    () => banks.filter((bank) =>
+      String(bank.name ?? "").toLocaleLowerCase().includes(normalizedSearchQuery),
+    ),
+    [banks, normalizedSearchQuery],
+  );
   const hasSelectionChanges = useMemo(() => {
     const selectedSet = new Set(selectedCategories);
     const baselineSet = new Set(baselineCategories);
@@ -1601,7 +1633,7 @@ function SelectCustomWordBanksScreen({
   };
 
   return (
-    <Screen>
+    <Screen style={{ overflowY: "hidden" }}>
       <div style={{ paddingTop: 24, marginBottom: 20 }}>
         <Title>Select more categories</Title>
       </div>
@@ -1617,10 +1649,25 @@ function SelectCustomWordBanksScreen({
         <BigButton onClick={onOpenCustomWordBanks} color={PALETTE.blue}>
           Create & browse categories
         </BigButton>
-        <OutlineButton onClick={onBack} color={PALETTE.muted} small>
-          Back
-        </OutlineButton>
       </div>
+
+      <input
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search categories"
+        style={{
+          width: "100%",
+          padding: "7px 14px",
+          borderRadius: 999,
+          border: `2px solid ${PALETTE.border}`,
+          fontSize: 16,
+          lineHeight: 1.2,
+          fontWeight: 700,
+          background: "#FFF",
+          color: PALETTE.text,
+          marginBottom: 10,
+        }}
+      />
 
       <div style={{
         background: "#FFF",
@@ -1629,6 +1676,10 @@ function SelectCustomWordBanksScreen({
         padding: 12,
         marginBottom: 14,
         flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}>
         <div style={{
           display: "flex",
@@ -1696,13 +1747,22 @@ function SelectCustomWordBanksScreen({
           </div>
         </div>
 
-        {banks.length === 0 ? (
+        {filteredBanks.length === 0 ? (
           <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
-            No custom categories available. Create your own or browse predefined categories using the button above or from the Home screen.
+            {normalizedSearchQuery
+              ? "No results"
+              : "No custom categories available. Create your own or browse predefined categories using the button above or from the Home screen."}
           </p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {banks.map((bank) => {
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            overflowY: "auto",
+            minHeight: 0,
+            overscrollBehavior: "contain",
+          }}>
+            {filteredBanks.map((bank) => {
               const isSelected = selectedCategories.includes(bank.id);
               return (
                 <button
@@ -1741,6 +1801,7 @@ function SelectCustomWordBanksScreen({
           </div>
         )}
       </div>
+      <BackButton onClick={onBack} />
     </Screen>
   );
 }

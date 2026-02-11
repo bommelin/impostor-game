@@ -16,11 +16,32 @@ const PALETTE = {
 };
 
 function darken(hex) {
-  const n = parseInt(hex.replace("#", ""), 16);
+  const normalized = normalizeHex(hex);
+  if (!normalized) return "#333333";
+  const n = parseInt(normalized.replace("#", ""), 16);
   const r = Math.max(0, (n >> 16) - 40);
   const g = Math.max(0, ((n >> 8) & 0xff) - 40);
   const b = Math.max(0, (n & 0xff) - 40);
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function normalizeHex(hex) {
+  if (typeof hex !== "string") return null;
+  const value = hex.trim();
+  if (!value.startsWith("#")) return null;
+  if (value.length === 4) {
+    const r = value[1];
+    const g = value[2];
+    const b = value[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  if (value.length === 7) return value;
+  return null;
+}
+
+function getButtonShadowColor(color) {
+  if (normalizeHex(color) === normalizeHex(PALETTE.muted)) return "#4A4A4A";
+  return darken(color);
 }
 
 const getBankSignature = (bank) => {
@@ -46,7 +67,7 @@ function ModalPillButton({ children, onClick, color = PALETTE.primary, disabled 
         background: disabled ? "#E7E7E7" : color,
         color: disabled ? "#AAA" : "#FFF",
         letterSpacing: 0.2,
-        boxShadow: disabled ? "none" : `0 3px 0 ${darken(color)}`,
+        boxShadow: disabled ? "none" : `0 3px 0 ${getButtonShadowColor(color)}`,
       }}
     >
       {children}
@@ -207,7 +228,7 @@ export default function CustomWordBanksScreen({
       display: "flex",
       flexDirection: "column",
       padding: "24px 20px",
-      overflowY: "auto",
+      overflowY: "hidden",
       background: PALETTE.bg,
       color: PALETTE.text,
     }}>
@@ -266,8 +287,9 @@ export default function CustomWordBanksScreen({
         </button>
       </div>
 
-      {activeTab === "my" && (
-        <>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, marginBottom: 14 }}>
+        {activeTab === "my" && (
+          <>
           <button
             type="button"
             className="btn-pressable"
@@ -422,7 +444,10 @@ export default function CustomWordBanksScreen({
             borderRadius: 16,
             border: `2px solid ${PALETTE.border}`,
             padding: 12,
-            marginBottom: 14,
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
           }}>
             <div style={{
               display: "flex",
@@ -574,11 +599,11 @@ export default function CustomWordBanksScreen({
               </div>
             )}
           </div>
-        </>
-      )}
+          </>
+        )}
 
-      {activeTab === "browse" && (
-        <>
+        {activeTab === "browse" && (
+          <>
           <input
             className="cwb-input"
             value={browseSearchQuery}
@@ -602,7 +627,10 @@ export default function CustomWordBanksScreen({
             borderRadius: 16,
             border: `2px solid ${PALETTE.border}`,
             padding: 12,
-            marginBottom: 14,
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
           }}>
             {browseThemeSections.length === 0 ? (
               <p style={{ textAlign: "center", color: "#BBB", fontWeight: 700, padding: "10px 0" }}>
@@ -721,8 +749,9 @@ export default function CustomWordBanksScreen({
               </div>
             )}
           </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
       <button
         type="button"
