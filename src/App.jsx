@@ -5,6 +5,7 @@ import {
   PREDEFINED_CUSTOM_WORD_BANK_THEMES,
 } from "./predefinedCustomWordBank";
 import CustomWordBanksScreen from "./screens/CustomWordBanks";
+import CreateCustomWordBankScreen from "./screens/CreateCustomWordBank";
 import {
   CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
   CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED,
@@ -1912,7 +1913,7 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
             Import
           </p>
           <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
-            1. Format text like this, using a semicolon (;) between categories:
+            1. Format text like this, using a semicolon between categories:
           </p>
           <p style={{
             color: PALETTE.muted,
@@ -2538,7 +2539,7 @@ function PostGameScreen({ onPlayAgain, onBackToHome, everyoneWasImpostor }) {
 }
 
 // ─── GAME STATE MACHINE ──────────────────────────────────────────────────────
-// screens: home | players | player_presets | categories | custom_word_banks | select_custom_word_banks | import_export_categories | reveal_loop | discussion | postgame
+// screens: home | players | player_presets | categories | custom_word_banks | create_custom_word_bank | select_custom_word_banks | import_export_categories | reveal_loop | discussion | postgame
 
 export default function App() {
   const [initialStored] = useState(() => readStoredState());
@@ -2950,7 +2951,10 @@ export default function App() {
         backButtonLabel={customWordBanksOrigin === "categories" ? "Add categories to selection" : "Back"}
         onBack={goBack}
         onToggleSelection={toggleCustomBankSelection}
-        onCreateBank={handleCreateCustomBank}
+        onOpenCreateBank={() => {
+          setCustomWordBanksInitialTab("my");
+          navigateTo("create_custom_word_bank");
+        }}
         onUpdateBank={handleUpdateCustomBank}
         onDeleteBank={handleDeleteCustomBank}
         onClearAllBanks={handleClearAllCustomBanks}
@@ -2959,6 +2963,17 @@ export default function App() {
           setCustomWordBanksInitialTab("my");
           navigateTo("import_export_categories");
         }}
+      />
+    </>
+  );
+
+  if (screen === "create_custom_word_bank") return (
+    <>
+      <GlobalStyle />
+      <CreateCustomWordBankScreen
+        nextDefaultName={getNextCustomWordBankName(customWordBanks)}
+        onCreateBank={handleCreateCustomBank}
+        onBack={goBack}
       />
     </>
   );

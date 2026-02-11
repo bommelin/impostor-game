@@ -65,7 +65,7 @@ export default function CustomWordBanksScreen({
   backButtonLabel = "Back",
   onBack,
   onToggleSelection,
-  onCreateBank,
+  onOpenCreateBank,
   onUpdateBank,
   onDeleteBank,
   onClearAllBanks,
@@ -74,7 +74,7 @@ export default function CustomWordBanksScreen({
   sortMode = CUSTOM_WORD_BANK_SORT_MODE_ORDER_OF_SAVING,
   onSortModeChange,
 }) {
-  const [editorMode, setEditorMode] = useState(null); // "create" | "edit" | null
+  const [editorMode, setEditorMode] = useState(null); // "edit" | null
   const [editingId, setEditingId] = useState(null);
   const [draftName, setDraftName] = useState("");
   const [draftWords, setDraftWords] = useState("");
@@ -138,14 +138,6 @@ export default function CustomWordBanksScreen({
     setActiveTab(initialTab === "my" ? "my" : "browse");
   }, [initialTab]);
 
-  const openCreate = () => {
-    setActiveTab("my");
-    setEditorMode("create");
-    setEditingId(null);
-    setDraftName("");
-    setDraftWords("");
-  };
-
   const openEdit = (bank) => {
     setEditorMode("edit");
     setEditingId(bank.id);
@@ -161,13 +153,8 @@ export default function CustomWordBanksScreen({
   };
 
   const handleSave = () => {
-    const normalizedDraftName = draftName.trim();
-    if (editorMode === "create") {
-      onCreateBank({ name: normalizedDraftName || nextDefaultName, wordsInput: draftWords });
-      closeEditor();
-      return;
-    }
     if (editorMode === "edit" && editingId) {
+      const normalizedDraftName = draftName.trim();
       const existingName = banks.find((bank) => bank.id === editingId)?.name || nextDefaultName;
       onUpdateBank(editingId, { name: normalizedDraftName || existingName, wordsInput: draftWords });
       closeEditor();
@@ -284,7 +271,7 @@ export default function CustomWordBanksScreen({
           <button
             type="button"
             className="btn-pressable"
-            onClick={openCreate}
+            onClick={onOpenCreateBank}
             style={{
               width: "100%",
               borderRadius: 14,
@@ -296,7 +283,7 @@ export default function CustomWordBanksScreen({
               boxShadow: "0 4px 0 #37939B",
             }}
           >
-            + Create New 
+            Create new category
           </button>
           <button
             type="button"
@@ -344,14 +331,14 @@ export default function CustomWordBanksScreen({
               marginBottom: 14,
             }}>
               <p style={{ fontWeight: 800, fontSize: 14, color: PALETTE.text, textTransform: "uppercase", letterSpacing: 1 }}>
-                {editorMode === "create" ? "Create List" : "Edit List"}
+                Edit List
               </p>
               <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
                 <input
                   className="cwb-input"
                   value={draftName}
                   onChange={(e) => setDraftName(e.target.value)}
-                  placeholder={editorMode === "create" ? nextDefaultName : "List name"}
+                  placeholder="List name"
                   style={{
                     padding: "10px 12px",
                     borderRadius: 10,

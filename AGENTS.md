@@ -92,7 +92,9 @@ Custom Categories screen behavior:
   - Recently played (uses `lastPlayedAt`, descending; never-played at bottom)
   - Order of saving (uses `createdAt`, ascending)
 - "My Custom Categories" (Saved tab) includes a destructive `Clear all` action that uses an in-app confirmation modal and deletes all saved custom categories.
-- "My Custom Categories" (Saved tab) includes an `Import / Export` secondary full-width button directly under `+ Create New` that opens the dedicated Import / Export Categories screen.
+- "My Custom Categories" (Saved tab) includes a full-width `Create new category` button that opens a dedicated `Create category` screen.
+- The `Create category` screen includes `Back`, keeps users on the screen after `Save` for consecutive creates, and resets to a clean form each time it is re-opened.
+- "My Custom Categories" (Saved tab) includes an `Import / Export` secondary full-width button directly under `Create new category` that opens the dedicated Import / Export Categories screen.
 - Import / Export `Back` returns to "My Custom Categories" with the Saved tab active.
 
 ## Persistence

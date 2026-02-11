@@ -9,7 +9,7 @@ Felix Bommelin
 [https://bommelin.github.io/impostor-game/](https://bommelin.github.io/impostor-game/)
 
 ## Home Screen Preview
-![Home screen demo](public/home-screen-demo.svg)
+<img src="public/home-screen-demo.svg" alt="Home screen demo" width="280" />
 
 ## Run Locally
 ```bash
@@ -44,7 +44,9 @@ npm run dev -- --host
 - **Built-in categories**: configured in `src/wordBank.js`
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
-  - includes `Import / Export` in the `Saved` tab (directly under `+ Create New`)
+  - `Create new category` in the `Saved` tab opens a dedicated `Create category` screen
+  - the create screen keeps you there after `Save` so you can add multiple lists in a row
+  - includes `Import / Export` in the `Saved` tab (directly under `Create new category`)
   - clear all custom categories with in-app confirmation
   - browse predefined templates grouped by theme in the `Browse` tab
   - copy templates into personal custom categories
