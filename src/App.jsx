@@ -41,8 +41,18 @@ const MAX_PLAYER_COUNT = 12;
 const load = () => {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
 };
+let cachedStoredState = null;
+const readStoredState = () => {
+  if (cachedStoredState !== null) return cachedStoredState;
+  cachedStoredState = load();
+  return cachedStoredState;
+};
 const save = (data) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...load(), ...data })); } catch {}
+  try {
+    const next = { ...readStoredState(), ...data };
+    cachedStoredState = next;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {}
 };
 const clampAllImpostorCooldown = (value) => {
   const parsed = Number(value);
@@ -752,7 +762,11 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
 
   const setDraft = (updater) => {
     onDraftChange((prevRaw) => {
-      const prev = createPlayersSetupDraft(prevRaw || { playerCount: n, impostorCount: k, names });
+      const prev = createPlayersSetupDraft({
+        playerCount: prevRaw?.n ?? n,
+        impostorCount: prevRaw?.k ?? k,
+        names: prevRaw?.names ?? names,
+      });
       const candidate = typeof updater === "function" ? updater(prev) : updater;
       return createPlayersSetupDraft({
         playerCount: candidate?.n ?? prev.n,
@@ -763,7 +777,18 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
   };
 
   const setN = (nextN) => {
-    setDraft((prev) => ({ ...prev, n: typeof nextN === "function" ? nextN(prev.n) : nextN }));
+    setDraft((prev) => {
+      const prevN = clampPlayerCount(prev.n);
+      const prevK = clampImpostorCount(prev.k, prevN);
+      const resolvedN = typeof nextN === "function" ? nextN(prevN) : nextN;
+      const nextNClamped = clampPlayerCount(resolvedN);
+      const nextMaxK = Math.max(1, nextNClamped - 1);
+      return {
+        ...prev,
+        n: nextNClamped,
+        k: prevK > nextMaxK ? nextMaxK : prevK,
+      };
+    });
   };
 
   const setK = (nextK) => {
@@ -773,6 +798,18 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
   const setNames = (nextNames) => {
     setDraft((prev) => ({ ...prev, names: typeof nextNames === "function" ? nextNames(prev.names) : nextNames }));
   };
+
+  useEffect(() => {
+    setK((value) => Math.min(value, n - 1));
+  }, [n]);
+
+  useEffect(() => {
+    save({
+      savedPlayers: sanitizePlayerNames(draft?.names, n),
+      lastPlayerCount: n,
+      lastImpostorCount: k,
+    });
+  }, [draft?.names, k, n]);
 
   const finalNames = names.map((name, i) => name.trim() || `Player ${i + 1}`);
 
@@ -797,8 +834,8 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
       <Counter
         label="Impostors"
         value={k}
-        onDec={() => setK((value) => Math.max(1, value - 1))}
-        onInc={() => setK((value) => value + 1)}
+        onDec={() => setK((value) => Math.max(value - 1, 1))}
+        onInc={() => setK((value) => Math.min(value + 1, n - 1))}
         disableDec={k <= 1}
         disableInc={k >= n - 1}
       />
@@ -836,7 +873,7 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
               boxShadow: "0 3px 0 #4A4A4A",
             }}
           >
-            Presets
+            Saved presets
           </PillButton>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -874,7 +911,7 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
   const [presets, setPresets] = useState(() => loadPlayerPresets());
   const [sortMode, setSortMode] = useState(() =>
     normalizePlayerPresetsSortMode(
-      load()[PLAYER_PRESETS_SORT_MODE_KEY] || DEFAULT_PLAYER_PRESETS_SORT_MODE,
+      readStoredState()[PLAYER_PRESETS_SORT_MODE_KEY] || DEFAULT_PLAYER_PRESETS_SORT_MODE,
     ),
   );
   const [infoModal, setInfoModal] = useState(null);
@@ -1052,25 +1089,14 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
         <div style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
+          gap: 8,
           marginBottom: 10,
         }}>
-          <span style={{
-            fontSize: 13,
-            fontWeight: 800,
-            color: PALETTE.muted,
-            textTransform: "uppercase",
-            letterSpacing: 1,
-          }}>
-            Sort by
-          </span>
           <div style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
             gap: 8,
-            flex: "0 1 68%",
+            width: "100%",
             minWidth: 0,
           }}>
             <select
@@ -1292,104 +1318,111 @@ function PlayerPresetsScreen({ draft, onDraftChange, onBack }) {
       )}
 
       {editingPreset && (
-        <AppModal maxWidth={400}>
-          <p style={{
-            textAlign: "center",
-            fontFamily: "'Fredoka One', cursive",
-            color: PALETTE.text,
-            fontSize: 24,
-            marginBottom: 12,
-          }}>
-            Edit preset
-          </p>
-          <div style={{ marginBottom: 10 }}>
-            <p style={{
-              fontWeight: 800,
-              fontSize: 12,
-              color: PALETTE.muted,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              marginBottom: 6,
-            }}>
-              Preset name
-            </p>
-            <input
-              value={editingPreset.name}
-              onChange={(e) => setEditingPreset((prev) => (prev ? { ...prev, name: e.target.value } : prev))}
-              placeholder="Preset name"
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 700,
-                border: `2px solid ${PALETTE.border}`,
-                outline: "none",
-                background: PALETTE.bg,
-                color: PALETTE.text,
-              }}
-            />
-          </div>
-          <Counter
-            label="Players"
-            value={editingPreset.playerCount}
-            onDec={() => handleEditPlayerCount(-1)}
-            onInc={() => handleEditPlayerCount(1)}
-            disableDec={editingPreset.playerCount <= MIN_PLAYER_COUNT}
-            disableInc={editingPreset.playerCount >= MAX_PLAYER_COUNT}
-          />
-          <Counter
-            label="Impostors"
-            value={editingPreset.impostorCount}
-            onDec={() => handleEditImpostorCount(-1)}
-            onInc={() => handleEditImpostorCount(1)}
-            disableDec={editingPreset.impostorCount <= 1}
-            disableInc={editingPreset.impostorCount >= editingPreset.playerCount - 1}
-          />
+        <AppModal maxWidth={440}>
           <div style={{
-            background: "#FFF",
-            borderRadius: 12,
-            border: `2px solid ${PALETTE.border}`,
-            padding: 10,
-            maxHeight: 220,
-            overflowY: "auto",
-            marginBottom: 12,
+            height: "min(680px, calc(100dvh - 72px))",
+            display: "flex",
+            flexDirection: "column",
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {editingPreset.players.map((name, i) => (
-                <input
-                  key={`${editingPreset.id}_${i}`}
-                  value={name}
-                  onChange={(e) => setEditingPreset((prev) => {
-                    if (!prev) return prev;
-                    return {
-                      ...prev,
-                      players: prev.players.map((entry, index) => (index === i ? e.target.value : entry)),
-                    };
-                  })}
-                  placeholder={`Player ${i + 1}`}
-                  style={{
-                    width: "100%",
-                    padding: "9px 12px",
-                    borderRadius: 10,
-                    fontSize: 16,
-                    fontWeight: 600,
-                    border: `2px solid ${PALETTE.border}`,
-                    outline: "none",
-                    background: PALETTE.bg,
-                    color: PALETTE.text,
-                  }}
-                />
-              ))}
+            <p style={{
+              textAlign: "center",
+              fontFamily: "'Fredoka One', cursive",
+              color: PALETTE.text,
+              fontSize: 24,
+              marginBottom: 12,
+            }}>
+              Edit preset
+            </p>
+            <div style={{ marginBottom: 10 }}>
+              <p style={{
+                fontWeight: 800,
+                fontSize: 12,
+                color: PALETTE.muted,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                marginBottom: 6,
+              }}>
+                Preset name
+              </p>
+              <input
+                value={editingPreset.name}
+                onChange={(e) => setEditingPreset((prev) => (prev ? { ...prev, name: e.target.value } : prev))}
+                placeholder="Preset name"
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  border: `2px solid ${PALETTE.border}`,
+                  outline: "none",
+                  background: PALETTE.bg,
+                  color: PALETTE.text,
+                }}
+              />
             </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-            <PillButton color={PALETTE.muted} onClick={() => setEditingPreset(null)}>
-              Cancel
-            </PillButton>
-            <PillButton color={PALETTE.primary} onClick={handleSaveEditedPreset}>
-              Save
-            </PillButton>
+            <Counter
+              label="Players"
+              value={editingPreset.playerCount}
+              onDec={() => handleEditPlayerCount(-1)}
+              onInc={() => handleEditPlayerCount(1)}
+              disableDec={editingPreset.playerCount <= MIN_PLAYER_COUNT}
+              disableInc={editingPreset.playerCount >= MAX_PLAYER_COUNT}
+            />
+            <Counter
+              label="Impostors"
+              value={editingPreset.impostorCount}
+              onDec={() => handleEditImpostorCount(-1)}
+              onInc={() => handleEditImpostorCount(1)}
+              disableDec={editingPreset.impostorCount <= 1}
+              disableInc={editingPreset.impostorCount >= editingPreset.playerCount - 1}
+            />
+            <div style={{
+              background: "#FFF",
+              borderRadius: 12,
+              border: `2px solid ${PALETTE.border}`,
+              padding: 10,
+              overflowY: "auto",
+              marginBottom: 12,
+              flex: 1,
+              minHeight: 0,
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {editingPreset.players.map((name, i) => (
+                  <input
+                    key={`${editingPreset.id}_${i}`}
+                    value={name}
+                    onChange={(e) => setEditingPreset((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        players: prev.players.map((entry, index) => (index === i ? e.target.value : entry)),
+                      };
+                    })}
+                    placeholder={`Player ${i + 1}`}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 10,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      border: `2px solid ${PALETTE.border}`,
+                      outline: "none",
+                      background: PALETTE.bg,
+                      color: PALETTE.text,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+              <PillButton color={PALETTE.muted} onClick={() => setEditingPreset(null)}>
+                Cancel
+              </PillButton>
+              <PillButton color={PALETTE.primary} onClick={handleSaveEditedPreset}>
+                Save
+              </PillButton>
+            </div>
           </div>
         </AppModal>
       )}
@@ -1540,11 +1573,23 @@ function SelectCustomWordBanksScreen({
   const selectedCategories = draftEnabledBankIds || [];
   const isDisabled = selectedCategories.length === 0;
   const handleAddCategories = () => onApply(selectedCategories);
+  const hasBanks = banks.length > 0;
+  const allBanksSelected = hasBanks && banks.every((bank) => selectedCategories.includes(bank.id));
 
   const toggleBank = (bankId) => {
     onDraftEnabledBankIdsChange((prev) =>
       prev.includes(bankId) ? prev.filter((entry) => entry !== bankId) : [...prev, bankId],
     );
+  };
+
+  const handleSelectAll = () => {
+    if (!hasBanks) return;
+    onDraftEnabledBankIdsChange(banks.map((bank) => bank.id));
+  };
+
+  const handleDeselectAll = () => {
+    if (!hasBanks) return;
+    onDraftEnabledBankIdsChange([]);
   };
 
   return (
@@ -1581,20 +1626,11 @@ function SelectCustomWordBanksScreen({
         <div style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
+          gap: 8,
           marginBottom: 10,
         }}>
-          <span style={{
-            fontSize: 13,
-            fontWeight: 800,
-            color: PALETTE.muted,
-            textTransform: "uppercase",
-            letterSpacing: 1,
-          }}>
-            Sort by
-          </span>
           <select
+            aria-label="Sort categories"
             value={sortMode}
             onChange={(e) => onSortModeChange(e.target.value)}
             style={{
@@ -1602,10 +1638,12 @@ function SelectCustomWordBanksScreen({
               border: `2px solid ${PALETTE.border}`,
               background: "#FFF",
               color: PALETTE.text,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 700,
-              padding: "6px 10px",
-              minWidth: 148,
+              padding: "5px 8px",
+              minWidth: 0,
+              width: "100%",
+              flex: 1,
             }}
           >
             <option value={CUSTOM_WORD_BANK_SORT_MODE_RECENTLY_PLAYED}>
@@ -1615,6 +1653,40 @@ function SelectCustomWordBanksScreen({
               Order of saving
             </option>
           </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <PillButton
+              color={PALETTE.muted}
+              disabled={!hasBanks || allBanksSelected}
+              onClick={handleSelectAll}
+              style={{
+                padding: "4px 8px",
+                fontSize: 10,
+                lineHeight: 1.1,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxShadow: !hasBanks || allBanksSelected ? "none" : "0 3px 0 #4A4A4A",
+                cursor: !hasBanks || allBanksSelected ? "not-allowed" : "pointer",
+              }}
+            >
+              Select all
+            </PillButton>
+            <PillButton
+              color={PALETTE.muted}
+              disabled={!hasBanks || selectedCategories.length === 0}
+              onClick={handleDeselectAll}
+              style={{
+                padding: "4px 8px",
+                fontSize: 10,
+                lineHeight: 1.1,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxShadow: !hasBanks || selectedCategories.length === 0 ? "none" : "0 3px 0 #4A4A4A",
+                cursor: !hasBanks || selectedCategories.length === 0 ? "not-allowed" : "pointer",
+              }}
+            >
+              Deselect all
+            </PillButton>
+          </div>
         </div>
 
         {banks.length === 0 ? (
@@ -2159,7 +2231,7 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
 
 
 function DiscussionBriefScreen({ starterName, categories, impostorCount, onStartDiscussion }) {
-  const initialTimerMinutes = useRef(clampTimerMinutes(load()[TIMER_STORAGE_KEY]));
+  const initialTimerMinutes = useRef(clampTimerMinutes(readStoredState()[TIMER_STORAGE_KEY]));
   const [selectedMinutes, setSelectedMinutes] = useState(initialTimerMinutes.current);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(initialTimerMinutes.current * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -2449,14 +2521,13 @@ function PostGameScreen({ onPlayAgain, onBackToHome, everyoneWasImpostor }) {
 // screens: home | players | player_presets | categories | custom_word_banks | select_custom_word_banks | import_export_categories | reveal_loop | discussion | postgame
 
 export default function App() {
-  const stored = load();
-  const initialCustomWordBanks = loadCustomWordBanks();
-  const hasPlayers = !!(stored.savedPlayers?.length);
-  const storedEnabledCustomBankIds = Array.isArray(stored.enabledCustomBankIds)
-    ? stored.enabledCustomBankIds
+  const [initialStored] = useState(() => readStoredState());
+  const [initialCustomWordBanks] = useState(() => loadCustomWordBanks());
+  const storedEnabledCustomBankIds = Array.isArray(initialStored.enabledCustomBankIds)
+    ? initialStored.enabledCustomBankIds
     : [];
-  const storedSelectedCustomBankIds = Array.isArray(stored.lastSelectedCustomBankIds)
-    ? stored.lastSelectedCustomBankIds
+  const storedSelectedCustomBankIds = Array.isArray(initialStored.lastSelectedCustomBankIds)
+    ? initialStored.lastSelectedCustomBankIds
     : [];
   const initialKnownCustomBankIds = new Set(initialCustomWordBanks.map((bank) => bank.id));
   const initialEnabledCustomBankIds = Array.from(new Set(
@@ -2472,17 +2543,19 @@ export default function App() {
   const screen = screenHistory[screenHistory.length - 1];
   const [customWordBanksOrigin, setCustomWordBanksOrigin] = useState("home");
   const [customWordBanksInitialTab, setCustomWordBanksInitialTab] = useState("browse");
-  const [players, setPlayers] = useState(stored.savedPlayers || []);
-  const [k, setK] = useState(stored.lastImpostorCount || 1);
+  const [players, setPlayers] = useState(initialStored.savedPlayers || []);
+  const [k, setK] = useState(initialStored.lastImpostorCount || 1);
   const [playersSetupDraft, setPlayersSetupDraft] = useState(() => createPlayersSetupDraft({
-    playerCount: stored.savedPlayers?.length || stored.lastPlayerCount || 4,
-    impostorCount: stored.lastImpostorCount || 1,
-    names: stored.savedPlayers || [],
+    playerCount: initialStored.savedPlayers?.length || initialStored.lastPlayerCount || 4,
+    impostorCount: initialStored.lastImpostorCount || 1,
+    names: initialStored.savedPlayers || [],
   }));
-  const [selectedCats, setSelectedCats] = useState(stored.lastSelectedCategories || []);
+  const [selectedCats, setSelectedCats] = useState(initialStored.lastSelectedCategories || []);
   const [customWordBanks, setCustomWordBanks] = useState(initialCustomWordBanks);
   const [selectedBuiltInCategories, setSelectedBuiltInCategories] = useState(() => {
-    const storedBuiltIn = Array.isArray(stored.lastSelectedCategories) ? stored.lastSelectedCategories : [];
+    const storedBuiltIn = Array.isArray(initialStored.lastSelectedCategories)
+      ? initialStored.lastSelectedCategories
+      : [];
     return storedBuiltIn.filter((cat) => Object.prototype.hasOwnProperty.call(CATEGORIES, cat));
   });
   const [enabledCustomBankIds, setEnabledCustomBankIds] = useState(initialEnabledCustomBankIds);
@@ -2491,9 +2564,10 @@ export default function App() {
   const [selectCustomWordBanksOrigin, setSelectCustomWordBanksOrigin] = useState("categories");
   const [customWordBanksSortMode, setCustomWordBanksSortMode] = useState(() =>
     normalizeCustomWordBankSortMode(
-      stored[CUSTOM_CATEGORIES_SORT_MODE_KEY] || DEFAULT_CUSTOM_WORD_BANK_SORT_MODE,
+      initialStored[CUSTOM_CATEGORIES_SORT_MODE_KEY] || DEFAULT_CUSTOM_WORD_BANK_SORT_MODE,
     ),
   );
+  const hasPlayers = players.length > 0 || !!(initialStored.savedPlayers?.length);
   // runtime
   const [word, setWord] = useState("");
   const [impostorIds, setImpostorIds] = useState([]);
@@ -2713,8 +2787,8 @@ export default function App() {
       <HomeScreen
         hasPlayers={hasPlayers}
         onStart={() => {
-          const fallbackNames = players.length > 0 ? players : stored.savedPlayers || [];
-          const fallbackCount = players.length > 0 ? players.length : stored.lastPlayerCount || 4;
+          const fallbackNames = players.length > 0 ? players : initialStored.savedPlayers || [];
+          const fallbackCount = players.length > 0 ? players.length : initialStored.lastPlayerCount || 4;
           setPlayersSetupDraft(createPlayersSetupDraft({
             playerCount: fallbackCount,
             impostorCount: k,
@@ -2750,8 +2824,8 @@ export default function App() {
           navigateTo("categories");
         }}
         onBack={() => {
-          const fallbackNames = players.length > 0 ? players : stored.savedPlayers || [];
-          const fallbackCount = players.length > 0 ? players.length : stored.lastPlayerCount || 4;
+          const fallbackNames = players.length > 0 ? players : initialStored.savedPlayers || [];
+          const fallbackCount = players.length > 0 ? players.length : initialStored.lastPlayerCount || 4;
           setPlayersSetupDraft(createPlayersSetupDraft({
             playerCount: fallbackCount,
             impostorCount: k,

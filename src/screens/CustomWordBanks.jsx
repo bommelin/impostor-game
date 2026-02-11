@@ -435,25 +435,14 @@ export default function CustomWordBanksScreen({
             <div style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
+              gap: 8,
               marginBottom: 10,
             }}>
-              <span style={{
-                fontSize: 13,
-                fontWeight: 800,
-                color: PALETTE.muted,
-                textTransform: "uppercase",
-                letterSpacing: 1,
-              }}>
-                Sort by
-              </span>
               <div style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
                 gap: 8,
-                flex: "0 1 68%",
+                width: "100%",
                 minWidth: 0,
               }}>
                 <select
