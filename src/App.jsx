@@ -2118,7 +2118,6 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
 
 function DiscussionBriefScreen({ starterName, categories, impostorCount, onStartDiscussion }) {
   const initialTimerMinutes = useRef(clampTimerMinutes(load()[TIMER_STORAGE_KEY]));
-  const hasVibratedForTimeUp = useRef(false);
   const [selectedMinutes, setSelectedMinutes] = useState(initialTimerMinutes.current);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(initialTimerMinutes.current * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -2126,20 +2125,12 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   const [hasStarted, setHasStarted] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const triggerTimerCompleteHaptic = useCallback(() => {
-    if (hasVibratedForTimeUp.current) return;
-    hasVibratedForTimeUp.current = true;
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate([80, 100, 80]);
-    }
-  }, []);
 
   useEffect(() => {
     if (!isRunning) return undefined;
     const timerId = window.setInterval(() => {
       setTimeLeftSeconds((prev) => {
         if (prev <= 1) {
-          triggerTimerCompleteHaptic();
           setIsRunning(false);
           setIsPaused(false);
           setIsTimeUp(true);
@@ -2149,12 +2140,11 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
       });
     }, 1000);
     return () => window.clearInterval(timerId);
-  }, [isRunning, triggerTimerCompleteHaptic]);
+  }, [isRunning]);
 
   const handleMinuteChange = (delta) => {
     if (hasStarted) return;
     const nextMinutes = clampTimerMinutes(selectedMinutes + delta);
-    hasVibratedForTimeUp.current = false;
     setSelectedMinutes(nextMinutes);
     setTimeLeftSeconds(nextMinutes * 60);
     setIsTimeUp(false);
@@ -2187,15 +2177,11 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
     setIsPaused(false);
     setHasStarted(false);
     setIsTimeUp(false);
-    hasVibratedForTimeUp.current = false;
     setTimeLeftSeconds(selectedMinutes * 60);
     setShowResetConfirm(false);
   };
 
   const handleEndTimer = () => {
-    if (timeLeftSeconds > 0) {
-      triggerTimerCompleteHaptic();
-    }
     setIsRunning(false);
     setIsPaused(false);
     setHasStarted(true);
