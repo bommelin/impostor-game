@@ -242,7 +242,30 @@ const GlobalStyle = () => (
       user-select: none;
     }
     input { font-family: 'Nunito', sans-serif; }
-    button { font-family: 'Fredoka One', cursive; cursor: pointer; border: none; outline: none; }
+    button { font-family: 'Fredoka One', cursive; cursor: pointer; border: none; }
+    button:focus-visible {
+      outline: 3px solid #4ECDC4;
+      outline-offset: 2px;
+    }
+    .btn-pressable {
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 80ms ease, box-shadow 80ms ease, filter 80ms ease, opacity 80ms ease;
+    }
+    .btn-pressable:active {
+      transform: translateY(2px) !important;
+      box-shadow: none !important;
+      filter: brightness(0.98);
+    }
+    .btn-pressable:disabled,
+    .btn-pressable[aria-disabled="true"] {
+      cursor: not-allowed;
+      opacity: 0.5;
+      transform: none !important;
+      box-shadow: none !important;
+      filter: none;
+    }
 
     @keyframes popIn {
       0% { transform: scale(0.7) rotate(-3deg); opacity: 0; }
@@ -294,31 +317,13 @@ function Screen({ children, style }) {
 }
 
 function BigButton({ children, onClick, color = PALETTE.primary, style, disabled, small, className }) {
-  const [pressed, setPressed] = useState(false);
-  const startedOnButton = useRef(false);
+  const buttonClassName = className ? `btn-pressable ${className}` : "btn-pressable";
   return (
     <button
-      className={className}
+      type="button"
+      className={buttonClassName}
       disabled={disabled}
-      onPointerDown={(e) => {
-        // Only register a press that physically began on this button
-        startedOnButton.current = true;
-        setPressed(true);
-        e.currentTarget.setPointerCapture(e.pointerId);
-      }}
-      onPointerUp={() => {
-        setPressed(false);
-        if (!disabled && startedOnButton.current) onClick?.();
-        startedOnButton.current = false;
-      }}
-      onPointerLeave={() => {
-        setPressed(false);
-        startedOnButton.current = false;
-      }}
-      onPointerCancel={() => {
-        setPressed(false);
-        startedOnButton.current = false;
-      }}
+      onClick={onClick}
       style={{
         background: disabled ? "#DDD" : color,
         color: disabled ? "#AAA" : "#FFF",
@@ -326,11 +331,9 @@ function BigButton({ children, onClick, color = PALETTE.primary, style, disabled
         padding: small ? "12px 20px" : "16px 24px",
         borderRadius: 18,
         width: "100%",
-        boxShadow: pressed || disabled ? "none" : `0 5px 0 ${disabled ? "#BBB" : darken(color)}`,
-        transform: pressed ? "translateY(4px)" : "translateY(0)",
-        transition: "transform 0.08s, box-shadow 0.08s",
+        boxShadow: disabled ? "none" : `0 5px 0 ${darken(color)}`,
         letterSpacing: 0.5,
-        touchAction: "none",
+        minHeight: 44,
         ...style,
       }}
     >
@@ -339,24 +342,23 @@ function BigButton({ children, onClick, color = PALETTE.primary, style, disabled
   );
 }
 
-function OutlineButton({ children, onClick, color = PALETTE.primary, style, small }) {
-  const [pressed, setPressed] = useState(false);
+function OutlineButton({ children, onClick, color = PALETTE.primary, style, small, disabled }) {
   return (
     <button
-      onPointerDown={() => setPressed(true)}
-      onPointerUp={() => { setPressed(false); onClick?.(); }}
-      onPointerLeave={() => setPressed(false)}
+      type="button"
+      className="btn-pressable"
+      disabled={disabled}
+      onClick={onClick}
       style={{
         background: "transparent",
-        color: color,
+        color: disabled ? "#AAA" : color,
         fontSize: small ? 15 : 18,
         padding: small ? "10px 16px" : "14px 20px",
         borderRadius: 16,
         width: "100%",
-        border: `2.5px solid ${color}`,
-        transform: pressed ? "scale(0.97)" : "scale(1)",
-        transition: "transform 0.08s",
+        border: `2.5px solid ${disabled ? "#DDD" : color}`,
         letterSpacing: 0.3,
+        minHeight: 44,
         ...style,
       }}
     >
@@ -374,17 +376,12 @@ function BackButton({ onClick, style }) {
 }
 
 function PillButton({ children, onClick, color = PALETTE.primary, disabled, style }) {
-  const [pressed, setPressed] = useState(false);
   return (
     <button
+      type="button"
+      className="btn-pressable"
       disabled={disabled}
-      onPointerDown={() => setPressed(true)}
-      onPointerUp={() => {
-        setPressed(false);
-        if (!disabled) onClick?.();
-      }}
-      onPointerLeave={() => setPressed(false)}
-      onPointerCancel={() => setPressed(false)}
+      onClick={onClick}
       style={{
         borderRadius: 999,
         padding: "8px 14px",
@@ -394,9 +391,8 @@ function PillButton({ children, onClick, color = PALETTE.primary, disabled, styl
         background: disabled ? "#E7E7E7" : color,
         color: disabled ? "#AAA" : "#FFF",
         letterSpacing: 0.2,
-        transform: pressed ? "scale(0.96)" : "scale(1)",
-        transition: "transform 0.08s",
         boxShadow: disabled ? "none" : `0 3px 0 ${darken(color)}`,
+        minHeight: 34,
         ...style,
       }}
     >
@@ -409,7 +405,8 @@ function Chip({ label, selected, onClick }) {
   const [c1, c2] = CATEGORY_COLORS[label] || ["#FF6B6B", "#FF8E53"];
   return (
     <button
-      className="category-tile"
+      type="button"
+      className="btn-pressable category-tile"
       onClick={onClick}
       style={{
         padding: "10px 8px",
@@ -447,7 +444,7 @@ function Counter({ label, value, onDec, onInc, disableInc, disableDec }) {
       border: `2px solid ${PALETTE.border}`, marginBottom: 10 }}>
       <span style={{ fontWeight: 700, fontSize: 16 }}>{label}</span>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <button onClick={onDec} disabled={disableDec} style={{
+        <button type="button" className="btn-pressable" onClick={onDec} disabled={disableDec} style={{
           width: 38, height: 38, aspectRatio: "1 / 1", borderRadius: 10,
           background: disableDec ? "#EEE" : PALETTE.primary,
           color: disableDec ? "#AAA" : "#FFF",
@@ -455,7 +452,7 @@ function Counter({ label, value, onDec, onInc, disableInc, disableDec }) {
           boxShadow: disableDec ? "none" : "0 3px 0 #CC4444",
         }}>−</button>
         <span style={{ fontSize: 22, fontFamily: "'Fredoka One', cursive", minWidth: 24, textAlign: "center" }}>{value}</span>
-        <button onClick={onInc} disabled={disableInc} style={{
+        <button type="button" className="btn-pressable" onClick={onInc} disabled={disableInc} style={{
           width: 38, height: 38, aspectRatio: "1 / 1", borderRadius: 10,
           background: disableInc ? "#EEE" : PALETTE.accent,
           color: disableInc ? "#AAA" : "#FFF",
@@ -1698,10 +1695,13 @@ function SelectCustomWordBanksScreen({
             {banks.map((bank) => {
               const isSelected = selectedCategories.includes(bank.id);
               return (
-                <div
+                <button
+                  type="button"
+                  className="btn-pressable"
                   key={bank.id}
                   onClick={() => toggleBank(bank.id)}
                   style={{
+                    width: "100%",
                     borderRadius: 12,
                     border: `2px solid ${isSelected ? PALETTE.primary : PALETTE.border}`,
                     background: isSelected ? "#FFF0F0" : "#FFF",
@@ -1711,6 +1711,7 @@ function SelectCustomWordBanksScreen({
                     alignItems: "center",
                     justifyContent: "space-between",
                     cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
@@ -1724,7 +1725,7 @@ function SelectCustomWordBanksScreen({
                   <span style={{ fontSize: 12, fontWeight: 800, color: isSelected ? PALETTE.primary : "#AAA" }}>
                     {isSelected ? "Selected" : "Tap to select"}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -2044,6 +2045,8 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
                   const isSelected = selectedExportIdSet.has(bank.id);
                   return (
                     <button
+                      type="button"
+                      className="btn-pressable"
                       key={bank.id}
                       onClick={() => toggleExportSelection(bank.id)}
                       style={{
@@ -2371,6 +2374,8 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <button
+            type="button"
+            className="btn-pressable"
             onClick={() => handleMinuteChange(-1)}
             disabled={hasStarted || selectedMinutes <= TIMER_MIN_MINUTES}
             style={{
@@ -2393,6 +2398,8 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
             {formatTimer(timeLeftSeconds)}
           </p>
           <button
+            type="button"
+            className="btn-pressable"
             onClick={() => handleMinuteChange(1)}
             disabled={hasStarted || selectedMinutes >= TIMER_MAX_MINUTES}
             style={{

@@ -31,17 +31,12 @@ const getBankSignature = (bank) => {
 };
 
 function ModalPillButton({ children, onClick, color = PALETTE.primary, disabled }) {
-  const [pressed, setPressed] = useState(false);
   return (
     <button
+      type="button"
+      className="btn-pressable"
       disabled={disabled}
-      onPointerDown={() => setPressed(true)}
-      onPointerUp={() => {
-        setPressed(false);
-        if (!disabled) onClick?.();
-      }}
-      onPointerLeave={() => setPressed(false)}
-      onPointerCancel={() => setPressed(false)}
+      onClick={onClick}
       style={{
         borderRadius: 999,
         padding: "8px 14px",
@@ -51,8 +46,6 @@ function ModalPillButton({ children, onClick, color = PALETTE.primary, disabled 
         background: disabled ? "#E7E7E7" : color,
         color: disabled ? "#AAA" : "#FFF",
         letterSpacing: 0.2,
-        transform: pressed ? "scale(0.96)" : "scale(1)",
-        transition: "transform 0.08s",
         boxShadow: disabled ? "none" : `0 3px 0 ${darken(color)}`,
       }}
     >
@@ -253,6 +246,8 @@ export default function CustomWordBanksScreen({
         }}
       >
         <button
+          type="button"
+          className="btn-pressable"
           onClick={() => switchTab("browse")}
           style={{
             borderRadius: 12,
@@ -267,6 +262,8 @@ export default function CustomWordBanksScreen({
           Browse
         </button>
         <button
+          type="button"
+          className="btn-pressable"
           onClick={() => switchTab("my")}
           style={{
             borderRadius: 12,
@@ -285,6 +282,8 @@ export default function CustomWordBanksScreen({
       {activeTab === "my" && (
         <>
           <button
+            type="button"
+            className="btn-pressable"
             onClick={openCreate}
             style={{
               width: "100%",
@@ -300,6 +299,8 @@ export default function CustomWordBanksScreen({
             + Create New 
           </button>
           <button
+            type="button"
+            className="btn-pressable"
             onClick={onOpenImportExport}
             style={{
               width: "100%",
@@ -394,6 +395,8 @@ export default function CustomWordBanksScreen({
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
+                    type="button"
+                    className="btn-pressable"
                     onClick={handleSave}
                     style={{
                       flex: 1,
@@ -408,6 +411,8 @@ export default function CustomWordBanksScreen({
                     Save
                   </button>
                   <button
+                    type="button"
+                    className="btn-pressable"
                     onClick={closeEditor}
                     style={{
                       borderRadius: 12,
@@ -468,6 +473,8 @@ export default function CustomWordBanksScreen({
                   </option>
                 </select>
                 <button
+                  type="button"
+                  className="btn-pressable"
                   disabled={!hasSavedCategories}
                   onClick={() => setIsClearAllConfirmOpen(true)}
                   style={{
@@ -497,8 +504,19 @@ export default function CustomWordBanksScreen({
                   return (
                     <div
                       key={bank.id}
+                      className={selectable ? "btn-pressable" : undefined}
+                      role={selectable ? "button" : undefined}
+                      tabIndex={selectable ? 0 : undefined}
+                      aria-pressed={selectable ? isSelected : undefined}
                       onClick={() => {
                         if (selectable) onToggleSelection(bank.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (!selectable) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onToggleSelection(bank.id);
+                        }
                       }}
                       style={{
                         borderRadius: 12,
@@ -527,6 +545,8 @@ export default function CustomWordBanksScreen({
                           </span>
                         )}
                         <button
+                          type="button"
+                          className="btn-pressable"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEdit(bank);
@@ -543,6 +563,8 @@ export default function CustomWordBanksScreen({
                           Edit
                         </button>
                         <button
+                          type="button"
+                          className="btn-pressable"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPendingDeleteBank(bank);
@@ -612,6 +634,9 @@ export default function CustomWordBanksScreen({
                     }}
                   >
                     <button
+                      type="button"
+                      className="btn-pressable"
+                      disabled={isBrowseSearching}
                       onClick={() => toggleThemeExpansion(theme.id)}
                       style={{
                         width: "100%",
@@ -669,6 +694,8 @@ export default function CustomWordBanksScreen({
                                 </p>
                               </div>
                               <button
+                                type="button"
+                                className="btn-pressable"
                                 disabled={isSaved}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -711,6 +738,8 @@ export default function CustomWordBanksScreen({
       )}
 
       <button
+        type="button"
+        className="btn-pressable"
         onClick={onBack}
         style={{
           marginTop: "auto",
