@@ -1574,7 +1574,7 @@ function CategoriesScreen({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <BigButton onClick={onPlay} color={PALETTE.primary} disabled={totalWords === 0}>
-          Let's Play!
+          Start game
         </BigButton>
         <BackButton onClick={onBack} />
       </div>
