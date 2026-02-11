@@ -677,6 +677,28 @@ function HomeScreen({
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
           More Categories
         </BigButton>
+        <div
+          style={{
+            width: "100%",
+            marginTop: 8,
+            marginBottom: 22,
+            padding: "12px 14px",
+            borderRadius: 18,
+            background: "#F1F1F1",
+            color: "#737373",
+            fontSize: "0.8rem",
+            lineHeight: 1.35,
+            fontWeight: 600,
+            textAlign: "center",
+          }}
+        >
+          <span style={{ display: "block", whiteSpace: "nowrap", color: "#5B5B5B", fontWeight: 800 }}>
+            💡 Tip: For a better experience, do the following:
+          </span>
+          <span style={{ display: "block", color: "#585858", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+            Safari -&gt; Share -&gt; Add to Home Screen.
+          </span>
+        </div>
       </div>
       {/* decorative blobs */}
       <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%",
