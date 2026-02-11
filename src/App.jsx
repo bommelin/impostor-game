@@ -656,6 +656,24 @@ function HomeScreen({
   onOpenCustomWordBanks,
   hasPlayers,
 }) {
+  const getInstallHint = () => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return null;
+
+    const userAgent = window.navigator.userAgent || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(userAgent) && !window.MSStream;
+    const isAndroid = /Android/i.test(userAgent);
+    const isStandalone =
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.navigator.standalone === true;
+
+    if (isStandalone) return null;
+    if (isIOS) return "Safari → Share → Add to Home Screen.";
+    if (isAndroid) return "Chrome → Menu → Add to Home screen (or Install app).";
+    return null;
+  };
+
+  const hintText = getInstallHint();
+
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center", gap: 0 }}>
       <div className="pop" style={{ textAlign: "center", marginBottom: 32 }}>
@@ -677,28 +695,30 @@ function HomeScreen({
         <BigButton onClick={onOpenCustomWordBanks} color="#FF8E53">
           More Categories
         </BigButton>
-        <div
-          style={{
-            width: "100%",
-            marginTop: 8,
-            marginBottom: 22,
-            padding: "12px 14px",
-            borderRadius: 18,
-            background: "#F1F1F1",
-            color: "#737373",
-            fontSize: "0.8rem",
-            lineHeight: 1.35,
-            fontWeight: 600,
-            textAlign: "center",
-          }}
-        >
-          <span style={{ display: "block", whiteSpace: "nowrap", color: "#5B5B5B", fontWeight: 800 }}>
-            💡 Tip: For a better experience, do the following:
-          </span>
-          <span style={{ display: "block", color: "#585858", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-            Safari -&gt; Share -&gt; Add to Home Screen.
-          </span>
-        </div>
+        {hintText && (
+          <div
+            style={{
+              width: "100%",
+              marginTop: 8,
+              marginBottom: 22,
+              padding: "12px 14px",
+              borderRadius: 18,
+              background: "#F1F1F1",
+              color: "#737373",
+              fontSize: "0.8rem",
+              lineHeight: 1.35,
+              fontWeight: 600,
+              textAlign: "center",
+            }}
+          >
+            <span style={{ display: "block", color: "#5B5B5B", fontWeight: 800 }}>
+              💡 Tip: For a better experience, do the following:
+            </span>
+            <span style={{ display: "block", color: "#585858", fontSize: "0.78rem" }}>
+              {hintText}
+            </span>
+          </div>
+        )}
       </div>
       {/* decorative blobs */}
       <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%",
