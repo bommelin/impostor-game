@@ -1,4 +1,4 @@
-export const IMPORT_EXPORT_FORMAT_EXAMPLE = "[name:Category name, words:word1,word2,word3]|[name:Another, words:wordA,wordB]";
+export const IMPORT_EXPORT_FORMAT_EXAMPLE = "[name:Sports, words:Football,Basketball,Tennis]; [name:Countries, words:France,Brazil,Japan]";
 
 const FORMAT_HINT = `Format: ${IMPORT_EXPORT_FORMAT_EXAMPLE}`;
 
@@ -14,7 +14,7 @@ export const formatCustomCategoriesForExport = (categories) => (
         .join(",");
       return `[name:${name}, words:${words}]`;
     })
-    .join("|")
+    .join(";")
 );
 
 export const parseImportCategoriesInput = (input) => {
@@ -24,7 +24,7 @@ export const parseImportCategoriesInput = (input) => {
     return { categories: [], error: `No categories found. ${FORMAT_HINT}` };
   }
 
-  const rawBlocks = trimmedInput.split("|");
+  const rawBlocks = trimmedInput.split(";");
   const categories = [];
 
   for (let index = 0; index < rawBlocks.length; index += 1) {
@@ -75,10 +75,10 @@ export const parseImportCategoriesInput = (input) => {
       };
     }
 
-    if (name.includes("|") || name.includes("]")) {
+    if (name.includes(";") || name.includes("]")) {
       return {
         categories: [],
-        error: `Category name cannot include "|" or "]". ${FORMAT_HINT}`,
+        error: `Category name cannot include ";" or "]". ${FORMAT_HINT}`,
       };
     }
 
@@ -89,10 +89,10 @@ export const parseImportCategoriesInput = (input) => {
       };
     }
 
-    if (wordsRaw.includes("|") || wordsRaw.includes("]")) {
+    if (wordsRaw.includes(";") || wordsRaw.includes("]")) {
       return {
         categories: [],
-        error: `Words cannot include "|" or "]". ${FORMAT_HINT}`,
+        error: `Words cannot include ";" or "]". ${FORMAT_HINT}`,
       };
     }
 

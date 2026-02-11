@@ -1806,6 +1806,7 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
 
   const startImport = () => {
     if (!importValidation.isValid) return;
+    setImportFeedback({ type: "", message: "" });
 
     const existingByNameKey = new Map(
       banks.map((bank) => [normalizeCategoryNameKey(bank.name), bank.name]),
@@ -1836,13 +1837,16 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
     });
   };
 
-  const handleOverwriteDecision = (shouldOverwrite) => {
+  const cancelImportSession = () => {
+    setOverwriteSession(null);
+    setImportFeedback({ type: "", message: "" });
+  };
+
+  const handleOverwriteDecision = () => {
     if (!overwriteSession) return;
 
     const currentConflict = overwriteSession.conflicts[overwriteSession.conflictIndex];
-    const nextOverwriteNameKeys = shouldOverwrite
-      ? [...overwriteSession.overwriteNameKeys, currentConflict.nameKey]
-      : overwriteSession.overwriteNameKeys;
+    const nextOverwriteNameKeys = [...overwriteSession.overwriteNameKeys, currentConflict.nameKey];
     const nextConflictIndex = overwriteSession.conflictIndex + 1;
 
     if (nextConflictIndex >= overwriteSession.conflicts.length) {
@@ -1898,7 +1902,7 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
             Import
           </p>
           <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
-            1. Format text like:
+            1. Format text like this, using a semicolon (;) between categories:
           </p>
           <p style={{
             color: PALETTE.muted,
@@ -1917,7 +1921,7 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
             {IMPORT_EXPORT_FORMAT_EXAMPLE}
           </p>
           <p style={{ color: PALETTE.muted, fontWeight: 700, fontSize: 13, lineHeight: 1.35, marginBottom: 10 }}>
-            2. Paste and click Import
+            2. Paste below and click Import
           </p>
 
           <textarea
@@ -2120,10 +2124,10 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
             '{activeOverwriteConflict.displayName}' already exists. Replace it with the imported version?
           </p>
           <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-            <PillButton color={PALETTE.muted} onClick={() => handleOverwriteDecision(false)}>
+            <PillButton color={PALETTE.muted} onClick={cancelImportSession}>
               Cancel
             </PillButton>
-            <PillButton color={PALETTE.primary} onClick={() => handleOverwriteDecision(true)}>
+            <PillButton color={PALETTE.primary} onClick={handleOverwriteDecision}>
               Overwrite
             </PillButton>
           </div>
