@@ -2317,6 +2317,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   const [hasStarted, setHasStarted] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
 
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -2379,6 +2380,15 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
     setHasStarted(true);
     setTimeLeftSeconds(0);
     setIsTimeUp(true);
+  };
+
+  const handleOpenEndGameConfirm = () => {
+    setShowEndGameConfirm(true);
+  };
+
+  const handleConfirmEndGame = () => {
+    setShowEndGameConfirm(false);
+    onStartDiscussion();
   };
 
   return (
@@ -2511,7 +2521,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
       </div>
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <BigButton onClick={onStartDiscussion} color={PALETTE.primary}>
+        <BigButton onClick={handleOpenEndGameConfirm} color={PALETTE.primary}>
           End Game
         </BigButton>
       </div>
@@ -2555,6 +2565,39 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
             </div>
           </div>
         </div>
+      )}
+
+      {showEndGameConfirm && (
+        <AppModal maxWidth={340}>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.text,
+            fontSize: 24,
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}>
+            End game
+          </p>
+          <p style={{
+            textAlign: "center",
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.35,
+            marginBottom: 14,
+          }}>
+            Are you done voting?
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <PillButton color={PALETTE.muted} onClick={() => setShowEndGameConfirm(false)}>
+              Cancel
+            </PillButton>
+            <PillButton color={PALETTE.primary} onClick={handleConfirmEndGame}>
+              End game
+            </PillButton>
+          </div>
+        </AppModal>
       )}
     </Screen>
   );
