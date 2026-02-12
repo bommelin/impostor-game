@@ -24,19 +24,19 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
   ]},
 
   { name: "Swedish celebrities", words: [
-    "Zlatan Ibrahimovic","JLC", "Zara Larsson","Björn Borg","Ingemar Stenmark","Henrik Lundqvist","Sarah Sjöström","Armand Duplantis",
-    "Avicii","Max Martin","Robyn","Håkan Hellström","Veronica Maggio","Carola Häggkvist","Petter","Måns Zelmerlöw",
-    "Alicia Vikander","Alexander Skarsgård","Bill Skarsgård","Stellan Skarsgård","Joel Kinnaman",
-    "Tove Lo","Lykke Li","PewDiePie","Notch","Greta Thunberg", "Markoolio", "Truls Möregårdh",
+    "Greta Thunberg","JLC","Avicii","Zlatan Ibrahimovic","Taylor Swift","Björn Borg","Ingemar Stenmark","Henrik Lundqvist","Sarah Sjöström","Armand Duplantis",
+    "Max Martin","Robyn","Håkan Hellström","Veronica Maggio","Carola Häggkvist","Petter","Måns Zelmerlöw",
+    "Alicia Vikander","Alexander Skarsgård","Stellan Skarsgård",
+    "Tove Lo","Lykke Li","PewDiePie","Notch", "Markoolio", "Truls Möregårdh",
     "Stefan Löfven","Jimmie Åkesson","Magdalena Andersson","Ulf Kristersson", "Fredrik Reinfeldt",
-    "Benjamin Ingrosso","Loreen","Cornelia Jakobs","David Batra","Petra Mede", 
-    "HOV1","Bolaget","Messiah Hallberg","Filip Hammar","Tony Irving",
+    "Benjamin Ingrosso","Loreen","Cornelia Jakobs","David Batra","Petra Mede",
+    "Zara Larsson","HOV1","Bolaget","Messiah Hallberg","Tony Irving",
     "David Hellenius","Pernilla Wahlgren","Henrik Dorsin","Felix Herngren","Tusse",
-    "Jonas Andersson (RMM)","Kulan RMM","Johan Rheborg","Robert Gustafsson",
+    "Jonas Andersson (RMM)","Johan Rheborg","Robert Gustafsson",
     "Ebba Busch", "Yung Lean","Samir Badran", "Viktor Frisk","Paow","Peter Stormare",
     "Arga snickaren","John Lundvik","Eric Saade","Lotta Schelin","Anis Don Demina", "Dermot Clemenger", "Alexander Ernstberger", "Gunilla Persson",
     "Fröken Snusk", "Pontus Rasmusson", "Edvin Törnblom", "Johanna Nordström",
-    "Rickard Olsson","Isabella Löwengrip","Paolo Roberto","Maria Montazami","Leif GW Persson","Jan Emanuel"
+    "Rickard Olsson","Isabella Löwengrip","Paolo Roberto","Maria Montazami","Leif GW Persson","Jan Emanuel",
   ]},
 
   { name: "Swedish influencers", words: [
