@@ -2885,7 +2885,7 @@ export default function App() {
     const chosenWord = pick(pool);
     const ids = Array.from({ length: players.length }, (_, i) => i);
     const allImpostorCooldown = loadAllImpostorCooldown();
-    const everyoneImpostor = allImpostorCooldown === 0 && Math.random() < 0.05;
+    const everyoneImpostor = allImpostorCooldown === 0 && Math.random() < 0.02;
     const impostors = everyoneImpostor ? ids : pickN(ids, k);
     const nextAllImpostorCooldown = everyoneImpostor
       ? ALL_IMPOSTOR_COOLDOWN_MAX
