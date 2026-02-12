@@ -322,7 +322,7 @@ export const PREDEFINED_CUSTOM_WORD_BANK_THEMES = [
   ...FIXED_PREDEFINED_THEME_DEFINITIONS.map((theme) => ({
     id: theme.id,
     label: theme.label,
-    items: getThemeItems(theme.itemNames),"x"
+    items: getThemeItems(theme.itemNames),
   })),
   {
     id: "other",
