@@ -16,18 +16,6 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
     "Val d'Isere","Zermatt","Chamonix"
   ]},
 
-  { name: "Professions", words: [
-    "Police Officer","Firefighter","Security Guard","Bouncer","Doctor","Nurse","Surgeon","Dentist","Psychologist",
-    "Preschool Teacher","High School Teacher","Private Tutor","University Professor", "McDonalds Cashier",
-    "Office Worker","Programmer","Electrician","Plumber","Carpenter","Construction Worker",
-    "Warehouse Worker","Delivery Driver","Taxi Driver","Truck Driver", 
-    "Store Clerk","Cashier","Barista","Waiter","Bartender","Chef",
-    "DJ","Musician","Photographer","Actor","Journalist",
-    "Airline Pilot","Flight Attendant","Personal Trainer","Physiotherapist",
-    "Hair Stylist","Makeup Artist","Real Estate Agent","Car Salesperson",
-    "Streamer","YouTuber","TikTok Creator","Influencer","Professional Gamer","Entrepreneur"
-  ]},
-
   { name: "Famous landmarks", words: [
     "Eiffel Tower","Big Ben","Colosseum","Statue of Liberty","Golden Gate Bridge","Mount Rushmore","Great Wall of China","Taj Mahal",
     "Petra","Angkor Wat","Machu Picchu","Christ the Redeemer","Sydney Opera House","Burj Khalifa","Stonehenge",
@@ -277,7 +265,7 @@ const FIXED_PREDEFINED_THEME_DEFINITIONS = [
   {
     id: "general",
     label: "🎲 General",
-    itemNames: ["Animals", "School subjects", "Professions"],
+    itemNames: ["Animals", "School subjects"],
   },
   {
     id: "geography",
@@ -334,7 +322,7 @@ export const PREDEFINED_CUSTOM_WORD_BANK_THEMES = [
   ...FIXED_PREDEFINED_THEME_DEFINITIONS.map((theme) => ({
     id: theme.id,
     label: theme.label,
-    items: getThemeItems(theme.itemNames),
+    items: getThemeItems(theme.itemNames),"x"
   })),
   {
     id: "other",
