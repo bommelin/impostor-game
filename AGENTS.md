@@ -13,6 +13,7 @@ No voting logic yet (manual voting happens off-device).
 - Setup has:
   - Player count (N) with +/-
   - Impostor count (K) with +/- and constraint: K <= N - 1
+  - Optional hints toggle (enabled/disabled), persisted locally
   - Names editable on the same screen
 - Then: choose categories.
 - Then: Play.
@@ -44,6 +45,13 @@ Implementation notes:
 - Do not add flags, modes, or special screens.
 - Do not change any other game flow.
 
+## Impostor hints
+- Optional setup toggle: `Hints enabled` / `Hints disabled`.
+- Hints are shown only to impostors during reveal.
+- A hint is chosen once per round and shared by all impostors.
+- Hints use a static mapping for built-in categories only (no AI generation).
+- Custom category words have no hint; show `No hints available` when hints are enabled.
+
 ## Screens (must match)
 1. Home
    - Start Game
@@ -62,6 +70,7 @@ Implementation notes:
 5. Role Reveal Loop (pass-the-phone)
    - Gate screen: "Pass to {name}" + hold/slide to reveal
    - Reveal screen: show word for civilians, "Impostor" for impostors
+   - If hints are enabled, impostors also see one round hint (or "No hints available")
    - Blackout 1–2s between players
 6. Starting Player screen
    - Show starting player name
@@ -101,6 +110,7 @@ Custom Categories screen behavior:
 Persist locally:
 - players list (names)
 - last N and K
+- hints enabled preference
 - player presets (`playerPresets`)
 - last selected categories (optional but recommended)
 

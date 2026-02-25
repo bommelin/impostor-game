@@ -21,6 +21,7 @@ npm run dev -- --host
 1. **Home**: `New Game`, `Play Again`, `More Categories`
 2. **Choose players**:
    - set player count, impostor count, and names
+   - toggle optional impostor hints (`Hints enabled` / `Hints disabled`)
    - open `Presets` to navigate to a dedicated **Player Presets** screen
    - presets can be saved/loaded/edited/deleted, sorted by `Recently played` or `Recently stored`, and cleared with in-app confirmation
    - presets store player names, player count, and impostor count (max 10)
@@ -32,6 +33,7 @@ npm run dev -- --host
 4. **Pass/reveal loop**:
    - pass screen (`I'm ready`)
    - swipe-to-peek private role reveal
+   - impostors see a round hint when hints are enabled (`No hints available` if missing)
 5. **Ready to play** screen:
    - starting player
    - selected categories
@@ -42,6 +44,7 @@ npm run dev -- --host
 
 ## Category Flows
 - **Built-in categories**: configured in `src/wordBank.js`
+- **Built-in hints**: configured in `src/hintsBank.js` (category -> word -> hint)
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
   - `Create new category` in the `Saved` tab opens a dedicated `Create category` screen
@@ -73,10 +76,12 @@ npm run dev -- --host
 - Random impostor assignment
 - Random starting player
 - Rare hidden all-impostor round (5% chance), revealed only after the round, with a 9-game cooldown after it occurs
+- Optional impostor hints for built-in categories only (custom categories have no hints)
 - Voting is manual/off-device
 
 ## Persistence
 - Saved players and setup values
+- Hints enabled preference
 - Player presets (`playerPresets`)
 - Last selected categories
 - Enabled custom category IDs

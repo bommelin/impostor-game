@@ -25,6 +25,7 @@ import {
   normalizeCategoryNameKey,
   parseImportCategoriesInput,
 } from "./importExportCategories";
+import { HINTS_BANK } from "./hintsBank";
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
@@ -204,6 +205,15 @@ const formatTimer = (totalSeconds) => {
   const minutes = Math.floor(safeSeconds / 60);
   const seconds = safeSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
+const getHintForBuiltInWord = (roundWord, selectedBuiltInCategories) => {
+  for (const categoryName of selectedBuiltInCategories) {
+    const rawHint = HINTS_BANK?.[categoryName]?.[roundWord];
+    if (typeof rawHint !== "string") continue;
+    const hint = rawHint.trim();
+    if (hint) return hint;
+  }
+  return null;
 };
 
 // ─── COLOUR PALETTE ───────────────────────────────────────────────────────────
@@ -764,7 +774,15 @@ function HomeScreen({
   );
 }
 
-function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack }) {
+function PlayersScreen({
+  draft,
+  hintsEnabled,
+  onHintsEnabledChange,
+  onDraftChange,
+  onContinue,
+  onOpenPresets,
+  onBack,
+}) {
   const n = clampPlayerCount(draft?.n);
   const names = sanitizePlayerNames(draft?.names, n);
   const k = clampImpostorCount(draft?.k, n);
@@ -817,13 +835,19 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
       savedPlayers: sanitizePlayerNames(draft?.names, n),
       lastPlayerCount: n,
       lastImpostorCount: k,
+      hintsEnabled,
     });
-  }, [draft?.names, k, n]);
+  }, [draft?.names, hintsEnabled, k, n]);
 
   const finalNames = names.map((name, i) => name.trim() || `Player ${i + 1}`);
 
   const handleContinue = () => {
-    save({ savedPlayers: finalNames, lastPlayerCount: n, lastImpostorCount: k });
+    save({
+      savedPlayers: finalNames,
+      lastPlayerCount: n,
+      lastImpostorCount: k,
+      hintsEnabled,
+    });
     onContinue({ players: finalNames, k });
   };
 
@@ -849,6 +873,24 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
           disableDec={k <= 1}
           disableInc={k >= n - 1}
         />
+        <button
+          type="button"
+          className="btn-pressable"
+          onClick={() => onHintsEnabledChange(!hintsEnabled)}
+          style={{
+            width: "100%",
+            borderRadius: 14,
+            border: `2px solid ${hintsEnabled ? PALETTE.blue : PALETTE.border}`,
+            background: hintsEnabled ? "#EAFBFA" : "#FFF",
+            color: hintsEnabled ? "#18857F" : PALETTE.muted,
+            padding: "10px 14px",
+            fontSize: 16,
+            fontWeight: 800,
+            marginBottom: 12,
+          }}
+        >
+          {hintsEnabled ? "Hints enabled" : "Hints disabled"}
+        </button>
         <div style={{
           background: "#FFF",
           borderRadius: 16,
@@ -2236,7 +2278,7 @@ function PassScreen({ name, onReady }) {
   );
 }
 
-function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
+function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext, isLast }) {
   const [revealed, setRevealed] = useState(false);
   const [nextReady, setNextReady] = useState(false);
 
@@ -2265,6 +2307,11 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
               </p>
               <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 48,
                 color: "#C0392B", textShadow: "2px 2px 0 #F1948A" }}>IMPOSTOR!</p>
+              {hintsEnabled && (
+                <p style={{ fontSize: 14, color: PALETTE.muted, marginTop: 10, fontWeight: 800 }}>
+                  {roundHint ? `Hint: ${roundHint}` : "No hints available"}
+                </p>
+              )}
               <p style={{ fontSize: 15, color: "#666", marginTop: 10, fontWeight: 600 }}>
                 Blend in. Don't get caught.
               </p>
@@ -2670,6 +2717,7 @@ export default function App() {
   const [customWordBanksInitialTab, setCustomWordBanksInitialTab] = useState("browse");
   const [players, setPlayers] = useState(initialStored.savedPlayers || []);
   const [k, setK] = useState(initialStored.lastImpostorCount || 1);
+  const [hintsEnabled, setHintsEnabled] = useState(initialStored.hintsEnabled === true);
   const [playersSetupDraft, setPlayersSetupDraft] = useState(() => createPlayersSetupDraft({
     playerCount: initialStored.savedPlayers?.length || initialStored.lastPlayerCount || 4,
     impostorCount: initialStored.lastImpostorCount || 1,
@@ -2695,10 +2743,16 @@ export default function App() {
   const hasPlayers = players.length > 0 || !!(initialStored.savedPlayers?.length);
   // runtime
   const [word, setWord] = useState("");
+  const [roundHint, setRoundHint] = useState(null);
   const [impostorIds, setImpostorIds] = useState([]);
   const [startingId, setStartingId] = useState(0);
   const [revealIndex, setRevealIndex] = useState(0);
   const [phase, setPhase] = useState("pass");
+
+  const handleHintsEnabledChange = useCallback((nextHintsEnabled) => {
+    setHintsEnabled(nextHintsEnabled);
+    save({ hintsEnabled: nextHintsEnabled });
+  }, []);
 
   const navigateTo = useCallback((nextScreen, { replace = false, reset = false } = {}) => {
     setScreenHistory((prev) => {
@@ -2875,6 +2929,7 @@ export default function App() {
     const selectedCustomBanks = customWordBanks.filter((bank) =>
       enabledCustomBankSet.has(bank.id) && selectedCustomBankIds.includes(bank.id),
     );
+    const selectedCustomWords = new Set(selectedCustomBanks.flatMap((bank) => bank.words));
     const allWords = [
       ...selectedBuiltInCategories.flatMap((cat) => CATEGORIES[cat] || []),
       ...selectedCustomBanks.flatMap((bank) => bank.words),
@@ -2883,6 +2938,14 @@ export default function App() {
     if (pool.length === 0) return;
 
     const chosenWord = pick(pool);
+    const isFromCustomPool = selectedCustomWords.has(chosenWord);
+    const chosenHint = hintsEnabled
+      ? (
+        isFromCustomPool
+          ? null
+          : getHintForBuiltInWord(chosenWord, selectedBuiltInCategories)
+      )
+      : null;
     const ids = Array.from({ length: players.length }, (_, i) => i);
     const allImpostorCooldown = loadAllImpostorCooldown();
     const everyoneImpostor = allImpostorCooldown === 0 && Math.random() < 0.02;
@@ -2917,12 +2980,22 @@ export default function App() {
       enabledCustomBankIds,
     });
     setWord(chosenWord);
+    setRoundHint(chosenHint);
     setImpostorIds(impostors);
     setStartingId(starter);
     setRevealIndex(0);
     setPhase("pass");
     navigateTo("reveal_loop");
-  }, [customWordBanks, enabledCustomBankIds, k, navigateTo, players, selectedBuiltInCategories, selectedCustomBankIds]);
+  }, [
+    customWordBanks,
+    enabledCustomBankIds,
+    hintsEnabled,
+    k,
+    navigateTo,
+    players,
+    selectedBuiltInCategories,
+    selectedCustomBankIds,
+  ]);
 
   if (screen === "home") return (
     <>
@@ -2954,6 +3027,8 @@ export default function App() {
       <GlobalStyle />
       <PlayersScreen
         draft={playersSetupDraft}
+        hintsEnabled={hintsEnabled}
+        onHintsEnabledChange={handleHintsEnabledChange}
         onDraftChange={setPlayersSetupDraft}
         onOpenPresets={() => navigateTo("player_presets")}
         onContinue={({ players: ps, k: ki }) => {
@@ -3127,6 +3202,8 @@ export default function App() {
           name={currentName}
           isImpostor={isImpostor}
           word={word}
+          hintsEnabled={hintsEnabled}
+          roundHint={roundHint}
           isLast={revealIndex === players.length - 1}
           onNext={() => {
             setRevealIndex(i => i + 1);
