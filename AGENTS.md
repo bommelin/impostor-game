@@ -49,8 +49,8 @@ Implementation notes:
 - Optional setup toggle: `Hints enabled` / `Hints disabled`.
 - Hints are shown only to impostors during reveal.
 - A hint is chosen once per round and shared by all impostors.
-- Hints use a static mapping for built-in categories only (no AI generation).
-- Custom category words have no hint; show `No hints available` when hints are enabled.
+- Hints use static mappings for built-in categories and predefined custom templates (no AI generation).
+- User-created custom category words without a mapping show `No hints available` when hints are enabled.
 
 ## Screens (must match)
 1. Home

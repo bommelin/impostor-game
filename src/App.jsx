@@ -25,7 +25,8 @@ import {
   normalizeCategoryNameKey,
   parseImportCategoriesInput,
 } from "./importExportCategories";
-import { HINTS_BANK } from "./hintsBank";
+import { HINTS_WORD_BANK } from "./hintsWordBank";
+import { HINTS_PREDEFINED_CUSTOM } from "./hintsPredefinedCustom";
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
@@ -208,13 +209,28 @@ const formatTimer = (totalSeconds) => {
 };
 const getHintForBuiltInWord = (roundWord, selectedBuiltInCategories) => {
   for (const categoryName of selectedBuiltInCategories) {
-    const rawHint = HINTS_BANK?.[categoryName]?.[roundWord];
+    const rawHint = HINTS_WORD_BANK?.[categoryName]?.[roundWord];
     if (typeof rawHint !== "string") continue;
     const hint = rawHint.trim();
     if (hint) return hint;
   }
   return null;
 };
+const getHintForPredefinedCustomWord = (roundWord, selectedCustomBanks) => {
+  for (const bank of selectedCustomBanks) {
+    if (!Array.isArray(bank?.words) || !bank.words.includes(roundWord)) continue;
+    const rawHint = HINTS_PREDEFINED_CUSTOM?.[bank.name]?.[roundWord];
+    if (typeof rawHint !== "string") continue;
+    const hint = rawHint.trim();
+    if (hint) return hint;
+  }
+  return null;
+};
+const getHintForRoundWord = (roundWord, selectedBuiltInCategories, selectedCustomBanks) => (
+  getHintForPredefinedCustomWord(roundWord, selectedCustomBanks)
+    || getHintForBuiltInWord(roundWord, selectedBuiltInCategories)
+    || null
+);
 
 // ─── COLOUR PALETTE ───────────────────────────────────────────────────────────
 const PALETTE = {
@@ -2308,13 +2324,29 @@ function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext,
               <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 48,
                 color: "#C0392B", textShadow: "2px 2px 0 #F1948A" }}>IMPOSTOR!</p>
               {hintsEnabled && (
-                <p style={{ fontSize: 14, color: PALETTE.muted, marginTop: 10, fontWeight: 800 }}>
-                  {roundHint ? `Hint: ${roundHint}` : "No hints available"}
-                </p>
+                <div style={{
+                  marginTop: 12,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "2px solid #E3A73A",
+                  background: "linear-gradient(135deg, rgba(255,217,61,0.55), rgba(255,179,71,0.65))",
+                  boxShadow: "0 4px 10px rgba(227,167,58,0.25)",
+                }}>
+                  <p style={{
+                    fontSize: 12,
+                    color: "#7A4A12",
+                    fontWeight: 800,
+                    letterSpacing: 0.7,
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}>
+                    Your hint
+                  </p>
+                  <p style={{ fontSize: 15, color: "#5B3B00", fontWeight: 700 }}>
+                    {roundHint || "No hints available"}
+                  </p>
+                </div>
               )}
-              <p style={{ fontSize: 15, color: "#666", marginTop: 10, fontWeight: 600 }}>
-                Blend in. Don't get caught.
-              </p>
             </div>
           ) : (
             <div>
@@ -2324,9 +2356,6 @@ function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext,
               </p>
               <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 42,
                 color: PALETTE.text, marginTop: 4 }}>{word}</p>
-              <p style={{ fontSize: 15, color: "#666", marginTop: 10, fontWeight: 600 }}>
-                Find the impostor!
-              </p>
             </div>
           )}
         </SwipeReveal>
@@ -2929,7 +2958,6 @@ export default function App() {
     const selectedCustomBanks = customWordBanks.filter((bank) =>
       enabledCustomBankSet.has(bank.id) && selectedCustomBankIds.includes(bank.id),
     );
-    const selectedCustomWords = new Set(selectedCustomBanks.flatMap((bank) => bank.words));
     const allWords = [
       ...selectedBuiltInCategories.flatMap((cat) => CATEGORIES[cat] || []),
       ...selectedCustomBanks.flatMap((bank) => bank.words),
@@ -2938,13 +2966,8 @@ export default function App() {
     if (pool.length === 0) return;
 
     const chosenWord = pick(pool);
-    const isFromCustomPool = selectedCustomWords.has(chosenWord);
     const chosenHint = hintsEnabled
-      ? (
-        isFromCustomPool
-          ? null
-          : getHintForBuiltInWord(chosenWord, selectedBuiltInCategories)
-      )
+      ? getHintForRoundWord(chosenWord, selectedBuiltInCategories, selectedCustomBanks)
       : null;
     const ids = Array.from({ length: players.length }, (_, i) => i);
     const allImpostorCooldown = loadAllImpostorCooldown();

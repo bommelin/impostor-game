@@ -44,7 +44,8 @@ npm run dev -- --host
 
 ## Category Flows
 - **Built-in categories**: configured in `src/wordBank.js`
-- **Built-in hints**: configured in `src/hintsBank.js` (category -> word -> hint)
+- **Built-in hints**: configured in `src/hintsWordBank.js` (category -> word -> hint)
+- **Predefined custom hints**: configured in `src/hintsPredefinedCustom.js` (category -> word -> hint)
 - **Custom categories (management)**: Home → `More Categories`
   - create/edit/delete custom categories
   - `Create new category` in the `Saved` tab opens a dedicated `Create category` screen
@@ -76,7 +77,7 @@ npm run dev -- --host
 - Random impostor assignment
 - Random starting player
 - Rare hidden all-impostor round (5% chance), revealed only after the round, with a 9-game cooldown after it occurs
-- Optional impostor hints for built-in categories only (custom categories have no hints)
+- Optional impostor hints for built-in categories and predefined custom templates
 - Voting is manual/off-device
 
 ## Persistence
