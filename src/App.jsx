@@ -481,6 +481,39 @@ function Counter({ label, value, onDec, onInc, disableInc, disableDec }) {
   );
 }
 
+function ToggleCounter({ label, enabled, onToggle }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+      background: "#FFF", borderRadius: 16, padding: "14px 18px",
+      border: `2px solid ${PALETTE.border}`, marginBottom: 10 }}>
+      <span style={{ fontWeight: 700, fontSize: 16 }}>{label}</span>
+      <button
+        type="button"
+        className="btn-pressable"
+        onClick={onToggle}
+        aria-pressed={enabled}
+        style={{
+          minWidth: 100,
+          height: 38,
+          borderRadius: 10,
+          padding: "0 12px",
+          background: enabled ? PALETTE.accent : PALETTE.primary,
+          color: "#FFF",
+          fontSize: 14,
+          fontWeight: 800,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: enabled ? "0 3px 0 #3A8A45" : "0 3px 0 #CC4444",
+          letterSpacing: 0.2,
+        }}
+      >
+        {enabled ? "Enabled" : "Disabled"}
+      </button>
+    </div>
+  );
+}
+
 function Title({ children, sub, style }) {
   return (
     <div style={{ textAlign: "center", ...style }}>
@@ -889,24 +922,11 @@ function PlayersScreen({
           disableDec={k <= 1}
           disableInc={k >= n - 1}
         />
-        <button
-          type="button"
-          className="btn-pressable"
-          onClick={() => onHintsEnabledChange(!hintsEnabled)}
-          style={{
-            width: "100%",
-            borderRadius: 14,
-            border: `2px solid ${hintsEnabled ? PALETTE.blue : PALETTE.border}`,
-            background: hintsEnabled ? "#EAFBFA" : "#FFF",
-            color: hintsEnabled ? "#18857F" : PALETTE.muted,
-            padding: "10px 14px",
-            fontSize: 16,
-            fontWeight: 800,
-            marginBottom: 12,
-          }}
-        >
-          {hintsEnabled ? "Hints enabled" : "Hints disabled"}
-        </button>
+        <ToggleCounter
+          label="Impostor Hints"
+          enabled={hintsEnabled}
+          onToggle={() => onHintsEnabledChange(!hintsEnabled)}
+        />
         <div style={{
           background: "#FFF",
           borderRadius: 16,
@@ -937,15 +957,14 @@ function PlayersScreen({
               Name your players
             </p>
             <PillButton
-              color={PALETTE.muted}
+              color="#FF8E53"
               onClick={onOpenPresets}
               style={{
                 padding: "6px 12px",
                 fontSize: 12,
-                boxShadow: "0 3px 0 #4A4A4A",
               }}
             >
-              Saved presets
+              Saved player configurations
             </PillButton>
           </div>
           <div style={{
