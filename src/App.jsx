@@ -25,6 +25,8 @@ import {
   normalizeCategoryNameKey,
   parseImportCategoriesInput,
 } from "./importExportCategories";
+import { HINTS_WORD_BANK } from "./hintsWordBank";
+import { HINTS_PREDEFINED_CUSTOM } from "./hintsPredefinedCustom";
 
 // ─── STORAGE HELPERS ─────────────────────────────────────────────────────────
 const STORAGE_KEY = "impostor_game_v1";
@@ -205,6 +207,30 @@ const formatTimer = (totalSeconds) => {
   const seconds = safeSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
+const getHintForBuiltInWord = (roundWord, selectedBuiltInCategories) => {
+  for (const categoryName of selectedBuiltInCategories) {
+    const rawHint = HINTS_WORD_BANK?.[categoryName]?.[roundWord];
+    if (typeof rawHint !== "string") continue;
+    const hint = rawHint.trim();
+    if (hint) return hint;
+  }
+  return null;
+};
+const getHintForPredefinedCustomWord = (roundWord, selectedCustomBanks) => {
+  for (const bank of selectedCustomBanks) {
+    if (!Array.isArray(bank?.words) || !bank.words.includes(roundWord)) continue;
+    const rawHint = HINTS_PREDEFINED_CUSTOM?.[bank.name]?.[roundWord];
+    if (typeof rawHint !== "string") continue;
+    const hint = rawHint.trim();
+    if (hint) return hint;
+  }
+  return null;
+};
+const getHintForRoundWord = (roundWord, selectedBuiltInCategories, selectedCustomBanks) => (
+  getHintForPredefinedCustomWord(roundWord, selectedCustomBanks)
+    || getHintForBuiltInWord(roundWord, selectedBuiltInCategories)
+    || null
+);
 
 // ─── COLOUR PALETTE ───────────────────────────────────────────────────────────
 const PALETTE = {
@@ -451,6 +477,39 @@ function Counter({ label, value, onDec, onInc, disableInc, disableDec }) {
           boxShadow: disableInc ? "none" : "0 3px 0 #3A8A45",
         }}>+</button>
       </div>
+    </div>
+  );
+}
+
+function ToggleCounter({ label, enabled, onToggle }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+      background: "#FFF", borderRadius: 16, padding: "14px 18px",
+      border: `2px solid ${PALETTE.border}`, marginBottom: 10 }}>
+      <span style={{ fontWeight: 700, fontSize: 16 }}>{label}</span>
+      <button
+        type="button"
+        className="btn-pressable"
+        onClick={onToggle}
+        aria-pressed={enabled}
+        style={{
+          minWidth: 100,
+          height: 38,
+          borderRadius: 10,
+          padding: "0 12px",
+          background: enabled ? PALETTE.accent : PALETTE.primary,
+          color: "#FFF",
+          fontSize: 14,
+          fontWeight: 800,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: enabled ? "0 3px 0 #3A8A45" : "0 3px 0 #CC4444",
+          letterSpacing: 0.2,
+        }}
+      >
+        {enabled ? "Enabled" : "Disabled"}
+      </button>
     </div>
   );
 }
@@ -764,7 +823,15 @@ function HomeScreen({
   );
 }
 
-function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack }) {
+function PlayersScreen({
+  draft,
+  hintsEnabled,
+  onHintsEnabledChange,
+  onDraftChange,
+  onContinue,
+  onOpenPresets,
+  onBack,
+}) {
   const n = clampPlayerCount(draft?.n);
   const names = sanitizePlayerNames(draft?.names, n);
   const k = clampImpostorCount(draft?.k, n);
@@ -817,13 +884,19 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
       savedPlayers: sanitizePlayerNames(draft?.names, n),
       lastPlayerCount: n,
       lastImpostorCount: k,
+      hintsEnabled,
     });
-  }, [draft?.names, k, n]);
+  }, [draft?.names, hintsEnabled, k, n]);
 
   const finalNames = names.map((name, i) => name.trim() || `Player ${i + 1}`);
 
   const handleContinue = () => {
-    save({ savedPlayers: finalNames, lastPlayerCount: n, lastImpostorCount: k });
+    save({
+      savedPlayers: finalNames,
+      lastPlayerCount: n,
+      lastImpostorCount: k,
+      hintsEnabled,
+    });
     onContinue({ players: finalNames, k });
   };
 
@@ -848,6 +921,11 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
           onInc={() => setK((value) => Math.min(value + 1, n - 1))}
           disableDec={k <= 1}
           disableInc={k >= n - 1}
+        />
+        <ToggleCounter
+          label="Impostor Hints"
+          enabled={hintsEnabled}
+          onToggle={() => onHintsEnabledChange(!hintsEnabled)}
         />
         <div style={{
           background: "#FFF",
@@ -879,15 +957,14 @@ function PlayersScreen({ draft, onDraftChange, onContinue, onOpenPresets, onBack
               Name your players
             </p>
             <PillButton
-              color={PALETTE.muted}
+              color="#FF8E53"
               onClick={onOpenPresets}
               style={{
                 padding: "6px 12px",
                 fontSize: 12,
-                boxShadow: "0 3px 0 #4A4A4A",
               }}
             >
-              Saved presets
+              Saved player configurations
             </PillButton>
           </div>
           <div style={{
@@ -2236,7 +2313,7 @@ function PassScreen({ name, onReady }) {
   );
 }
 
-function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
+function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext, isLast }) {
   const [revealed, setRevealed] = useState(false);
   const [nextReady, setNextReady] = useState(false);
 
@@ -2265,9 +2342,30 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
               </p>
               <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 48,
                 color: "#C0392B", textShadow: "2px 2px 0 #F1948A" }}>IMPOSTOR!</p>
-              <p style={{ fontSize: 15, color: "#666", marginTop: 10, fontWeight: 600 }}>
-                Blend in. Don't get caught.
-              </p>
+              {hintsEnabled && (
+                <div style={{
+                  marginTop: 12,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "2px solid #E3A73A",
+                  background: "linear-gradient(135deg, rgba(255,217,61,0.55), rgba(255,179,71,0.65))",
+                  boxShadow: "0 4px 10px rgba(227,167,58,0.25)",
+                }}>
+                  <p style={{
+                    fontSize: 12,
+                    color: "#7A4A12",
+                    fontWeight: 800,
+                    letterSpacing: 0.7,
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}>
+                    Your hint
+                  </p>
+                  <p style={{ fontSize: 15, color: "#5B3B00", fontWeight: 700 }}>
+                    {roundHint || "No hints available"}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div>
@@ -2277,9 +2375,6 @@ function RevealScreen({ name, isImpostor, word, onNext, isLast }) {
               </p>
               <p style={{ fontFamily: "'Fredoka One', cursive", fontSize: 42,
                 color: PALETTE.text, marginTop: 4 }}>{word}</p>
-              <p style={{ fontSize: 15, color: "#666", marginTop: 10, fontWeight: 600 }}>
-                Find the impostor!
-              </p>
             </div>
           )}
         </SwipeReveal>
@@ -2670,6 +2765,7 @@ export default function App() {
   const [customWordBanksInitialTab, setCustomWordBanksInitialTab] = useState("browse");
   const [players, setPlayers] = useState(initialStored.savedPlayers || []);
   const [k, setK] = useState(initialStored.lastImpostorCount || 1);
+  const [hintsEnabled, setHintsEnabled] = useState(initialStored.hintsEnabled === true);
   const [playersSetupDraft, setPlayersSetupDraft] = useState(() => createPlayersSetupDraft({
     playerCount: initialStored.savedPlayers?.length || initialStored.lastPlayerCount || 4,
     impostorCount: initialStored.lastImpostorCount || 1,
@@ -2695,10 +2791,16 @@ export default function App() {
   const hasPlayers = players.length > 0 || !!(initialStored.savedPlayers?.length);
   // runtime
   const [word, setWord] = useState("");
+  const [roundHint, setRoundHint] = useState(null);
   const [impostorIds, setImpostorIds] = useState([]);
   const [startingId, setStartingId] = useState(0);
   const [revealIndex, setRevealIndex] = useState(0);
   const [phase, setPhase] = useState("pass");
+
+  const handleHintsEnabledChange = useCallback((nextHintsEnabled) => {
+    setHintsEnabled(nextHintsEnabled);
+    save({ hintsEnabled: nextHintsEnabled });
+  }, []);
 
   const navigateTo = useCallback((nextScreen, { replace = false, reset = false } = {}) => {
     setScreenHistory((prev) => {
@@ -2883,6 +2985,9 @@ export default function App() {
     if (pool.length === 0) return;
 
     const chosenWord = pick(pool);
+    const chosenHint = hintsEnabled
+      ? getHintForRoundWord(chosenWord, selectedBuiltInCategories, selectedCustomBanks)
+      : null;
     const ids = Array.from({ length: players.length }, (_, i) => i);
     const allImpostorCooldown = loadAllImpostorCooldown();
     const everyoneImpostor = allImpostorCooldown === 0 && Math.random() < 0.02;
@@ -2917,12 +3022,22 @@ export default function App() {
       enabledCustomBankIds,
     });
     setWord(chosenWord);
+    setRoundHint(chosenHint);
     setImpostorIds(impostors);
     setStartingId(starter);
     setRevealIndex(0);
     setPhase("pass");
     navigateTo("reveal_loop");
-  }, [customWordBanks, enabledCustomBankIds, k, navigateTo, players, selectedBuiltInCategories, selectedCustomBankIds]);
+  }, [
+    customWordBanks,
+    enabledCustomBankIds,
+    hintsEnabled,
+    k,
+    navigateTo,
+    players,
+    selectedBuiltInCategories,
+    selectedCustomBankIds,
+  ]);
 
   if (screen === "home") return (
     <>
@@ -2954,6 +3069,8 @@ export default function App() {
       <GlobalStyle />
       <PlayersScreen
         draft={playersSetupDraft}
+        hintsEnabled={hintsEnabled}
+        onHintsEnabledChange={handleHintsEnabledChange}
         onDraftChange={setPlayersSetupDraft}
         onOpenPresets={() => navigateTo("player_presets")}
         onContinue={({ players: ps, k: ki }) => {
@@ -3127,6 +3244,8 @@ export default function App() {
           name={currentName}
           isImpostor={isImpostor}
           word={word}
+          hintsEnabled={hintsEnabled}
+          roundHint={roundHint}
           isLast={revealIndex === players.length - 1}
           onNext={() => {
             setRevealIndex(i => i + 1);

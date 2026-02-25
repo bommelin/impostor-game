@@ -24,7 +24,7 @@ export const CATEGORIES = {
     "Fröken Snusk", "Pontus Rasmusson", "Edvin Törnblom", "Johanna Nordström",
     "Rickard Olsson","Isabella Löwengrip","Paolo Roberto","Maria Montazami","Leif GW Persson","Jan Emanuel",
     "Rihanna","Ariana Grande","Drake", "Donald Trump",
-    "Ed Sheeran","Billie Eilish","The Weeknd","Justin Bieber",
+    "Ed Sheeran","Billie Eilish","The Weekend","Justin Bieber",
     "Beyoncé","Dua Lipa","Harry Styles","Eminem",
     "Kanye West","Nicki Minaj","Bad Bunny",
     "Elton John","Madonna","Michael Jackson",

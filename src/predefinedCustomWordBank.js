@@ -48,7 +48,7 @@ const PREDEFINED_TEMPLATE_ENTRIES = [
     "JLC","Random Making Movies","STHLM Panda","Filip Dikmen","Hampus Hedström",
     "Tan by Klara","Emelie Lindmark","Sofie Karlstad",
     "Amilia Stapelfeldt","Christofer Westerlund",
-    "Isabella Löwengrip","Kenza Zouiten","Sofie Fahrman","Matilda Smedius"
+    "Isabella Löwengrip","Kenza Zouiten","Sofie Fahrman"
   ]},
 
   { name: "Places in Sweden", words: [
