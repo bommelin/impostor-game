@@ -72,8 +72,11 @@ Implementation notes:
    - Reveal screen: show word for civilians, "Impostor" for impostors
    - If hints are enabled, impostors also see one round hint (or "No hints available")
    - Blackout 1–2s between players
+   - A small corner leave action is available throughout the loop; confirmation returns to Choose Categories with the current players
 6. Starting Player screen
    - Show starting player name
+   - `Reveal impostor` requires confirmation, then shows all assigned impostor names and the shared hint when hints are enabled
+   - The small corner leave action remains available and returns to Choose Categories after confirmation
 7. Post Game
    - New Game (same players) → Choose Categories
    - Choose Categories (same as above)

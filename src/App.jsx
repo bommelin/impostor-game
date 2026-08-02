@@ -583,6 +583,88 @@ function AppModal({ children, maxWidth = 360 }) {
 }
 
 // ─── SWIPE PEEK ──────────────────────────────────────────────────────────────
+// Shared leave control for every screen in an active round.
+function GameplayLeaveControl({ onLeave }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn-pressable"
+        aria-label="Leave game"
+        title="Leave game"
+        onClick={() => setShowConfirm(true)}
+        style={{
+          position: "absolute",
+          top: 14,
+          right: 16,
+          zIndex: 4,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          border: `2px solid ${PALETTE.border}`,
+          background: "#FFF",
+          color: PALETTE.muted,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 3px 0 #D8D0C7",
+        }}
+      >
+        <svg
+          aria-hidden="true"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M10 5H5v14h5" />
+          <path d="M14 8l4 4-4 4" />
+          <path d="M18 12H9" />
+        </svg>
+      </button>
+
+      {showConfirm && (
+        <AppModal maxWidth={340}>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.text,
+            fontSize: 24,
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}>
+            Leave this game?
+          </p>
+          <p style={{
+            textAlign: "center",
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.35,
+            marginBottom: 14,
+          }}>
+            This round will end and you will return to category selection.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <PillButton color={PALETTE.muted} onClick={() => setShowConfirm(false)}>
+              Cancel
+            </PillButton>
+            <PillButton color={PALETTE.primary} onClick={onLeave}>
+              Leave game
+            </PillButton>
+          </div>
+        </AppModal>
+      )}
+    </>
+  );
+}
+
 // Default state: solid opaque cover plate — nothing leaks through.
 // Drag the thumb right to peek; content shows only while held past threshold.
 // Releasing snaps everything back. onReveal fires once to unlock the Next button.
@@ -2288,9 +2370,10 @@ function ImportExportCategoriesScreen({ banks, onImportCategories, onBack }) {
   );
 }
 
-function PassScreen({ name, onReady }) {
+function PassScreen({ name, onReady, onLeave }) {
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
+      <GameplayLeaveControl onLeave={onLeave} />
       <div style={{ textAlign: "center", width: "100%" }}>
         <div style={{ fontSize: 72, marginBottom: 16 }}>📱</div>
         <h2 style={{ fontFamily: "'Fredoka One', cursive", fontSize: 28,
@@ -2313,7 +2396,16 @@ function PassScreen({ name, onReady }) {
   );
 }
 
-function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext, isLast }) {
+function RevealScreen({
+  name,
+  isImpostor,
+  word,
+  hintsEnabled,
+  roundHint,
+  onNext,
+  onLeave,
+  isLast,
+}) {
   const [revealed, setRevealed] = useState(false);
   const [nextReady, setNextReady] = useState(false);
 
@@ -2325,6 +2417,7 @@ function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext,
 
   return (
     <Screen style={{ justifyContent: "center", alignItems: "center" }}>
+      <GameplayLeaveControl onLeave={onLeave} />
       <div style={{ width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <p style={{ fontWeight: 800, fontSize: 15, color: PALETTE.muted,
@@ -2403,7 +2496,16 @@ function RevealScreen({ name, isImpostor, word, hintsEnabled, roundHint, onNext,
 }
 
 
-function DiscussionBriefScreen({ starterName, categories, impostorCount, onStartDiscussion }) {
+function DiscussionBriefScreen({
+  starterName,
+  categories,
+  impostorCount,
+  impostorNames,
+  hintsEnabled,
+  roundHint,
+  onStartDiscussion,
+  onLeave,
+}) {
   const initialTimerMinutes = useRef(clampTimerMinutes(readStoredState()[TIMER_STORAGE_KEY]));
   const [selectedMinutes, setSelectedMinutes] = useState(initialTimerMinutes.current);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(initialTimerMinutes.current * 60);
@@ -2413,6 +2515,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
+  const [impostorRevealStep, setImpostorRevealStep] = useState(null);
 
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -2488,6 +2591,7 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
 
   return (
     <Screen style={{ overflowY: "auto" }}>
+      <GameplayLeaveControl onLeave={onLeave} />
       <div style={{ paddingTop: 24, paddingBottom: 8 }}>
         <Title>Ready to play!</Title>
       </div>
@@ -2616,6 +2720,9 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
       </div>
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <BigButton onClick={() => setImpostorRevealStep("confirm")} color={PALETTE.blue}>
+          Reveal impostor
+        </BigButton>
         <BigButton onClick={handleOpenEndGameConfirm} color={PALETTE.primary}>
           End Game
         </BigButton>
@@ -2690,6 +2797,104 @@ function DiscussionBriefScreen({ starterName, categories, impostorCount, onStart
             </PillButton>
             <PillButton color={PALETTE.primary} onClick={handleConfirmEndGame}>
               End game
+            </PillButton>
+          </div>
+        </AppModal>
+      )}
+
+      {impostorRevealStep === "confirm" && (
+        <AppModal maxWidth={340}>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.text,
+            fontSize: 24,
+            marginBottom: 10,
+            lineHeight: 1.2,
+          }}>
+            Reveal the impostor?
+          </p>
+          <p style={{
+            textAlign: "center",
+            color: PALETTE.muted,
+            fontWeight: 700,
+            fontSize: 14,
+            lineHeight: 1.35,
+            marginBottom: 14,
+          }}>
+            This will show every impostor's name and, when hints are enabled, their shared hint.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+            <PillButton color={PALETTE.muted} onClick={() => setImpostorRevealStep(null)}>
+              Cancel
+            </PillButton>
+            <PillButton color={PALETTE.primary} onClick={() => setImpostorRevealStep("result")}>
+              Reveal
+            </PillButton>
+          </div>
+        </AppModal>
+      )}
+
+      {impostorRevealStep === "result" && (
+        <AppModal maxWidth={360}>
+          <p style={{
+            textAlign: "center",
+            fontFamily: "'Fredoka One', cursive",
+            color: PALETTE.primary,
+            fontSize: 26,
+            marginBottom: 14,
+            lineHeight: 1.2,
+          }}>
+            {impostorNames.length === 1 ? "The impostor is" : "The impostors are"}
+          </p>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            marginBottom: hintsEnabled ? 14 : 18,
+          }}>
+            {impostorNames.map((name, index) => (
+              <div key={`${index}-${name}`} style={{
+                padding: "10px 14px",
+                borderRadius: 14,
+                border: `2px solid ${PALETTE.primary}`,
+                background: "#FFF0F0",
+                color: PALETTE.text,
+                textAlign: "center",
+                fontFamily: "'Fredoka One', cursive",
+                fontSize: 22,
+              }}>
+                {name}
+              </div>
+            ))}
+          </div>
+          {hintsEnabled && (
+            <div style={{
+              marginBottom: 16,
+              padding: "11px 12px",
+              borderRadius: 12,
+              border: "2px solid #E3A73A",
+              background: "#FFF7D6",
+              textAlign: "center",
+            }}>
+              <p style={{
+                fontSize: 12,
+                color: "#7A4A12",
+                fontWeight: 800,
+                letterSpacing: 0.7,
+                textTransform: "uppercase",
+                marginBottom: 4,
+              }}>
+                Shared hint
+              </p>
+              <p style={{ color: "#5B3B00", fontSize: 15, fontWeight: 700 }}>
+                {roundHint || "No hints available"}
+              </p>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <PillButton color={PALETTE.blue} onClick={() => setImpostorRevealStep(null)}>
+              Close
             </PillButton>
           </div>
         </AppModal>
@@ -3211,6 +3416,8 @@ export default function App() {
   );
 
   if (screen === "reveal_loop") {
+    const leaveRound = () => returnToScreen("categories");
+
     // All reveals done → go to discussion brief
     if (revealIndex >= players.length) return (
       <>
@@ -3219,7 +3426,11 @@ export default function App() {
           starterName={players[startingId]}
           categories={selectedCats}
           impostorCount={k}
+          impostorNames={impostorIds.map((id) => players[id])}
+          hintsEnabled={hintsEnabled}
+          roundHint={roundHint}
           onStartDiscussion={() => navigateTo("postgame")}
+          onLeave={leaveRound}
         />
       </>
     );
@@ -3233,6 +3444,7 @@ export default function App() {
         <PassScreen
           name={currentName}
           onReady={() => setPhase("reveal")}
+          onLeave={leaveRound}
         />
       </>
     );
@@ -3247,6 +3459,7 @@ export default function App() {
           hintsEnabled={hintsEnabled}
           roundHint={roundHint}
           isLast={revealIndex === players.length - 1}
+          onLeave={leaveRound}
           onNext={() => {
             setRevealIndex(i => i + 1);
             setPhase("pass");

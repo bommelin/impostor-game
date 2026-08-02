@@ -39,6 +39,8 @@ npm run dev -- --host
    - selected categories
    - impostor count
    - timer controls
+   - confirmed `Reveal impostor` action shows all impostor names and the shared hint when hints are enabled
+   - a small leave-game control returns to category selection after confirmation
 6. **End Game**
 7. **Round Over**: `Play Again`, `Back`, `Exit`
 
@@ -79,6 +81,7 @@ npm run dev -- --host
 - Rare hidden all-impostor round (5% chance), revealed only after the round, with a 9-game cooldown after it occurs
 - Optional impostor hints for built-in categories and predefined custom templates
 - Voting is manual/off-device
+- A live round can be abandoned from its corner leave control; current players are retained for category selection
 
 ## Persistence
 - Saved players and setup values
